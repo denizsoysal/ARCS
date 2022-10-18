@@ -4,7 +4,7 @@ Erasing specific parts of a whiteboard on wheels, specific meaning only parts wi
 ## Actions
 1. Start task: Erasing process starts with a given cue, e.g. the whiteboard is rolled into the robots range.
 2. Orientation of whiteboard: Grab the board with both arms and bring it to a position in which the area to be erased is reachable, two arms are necessary to be able to rotate the board more easily and move it sideways in a controllable way.
-3. Keep holding the board with one arm, grab the eraser with the other and start erasing. This behaviour is inspired by how a human would erase a whiteboard on wheels to prevent it rolling away.
+3. Erasing: Keep holding the board with one arm, grab the eraser with the other and start erasing. This behaviour is inspired by how a human would erase a whiteboard on wheels to prevent it rolling away.
 4. If other parts of the whiteboard have writing on it which is not reachable after this, grab the board again and move it over to erase the other parts. Repeat untill whiteboard is clean.
 5. (stretch goal: If one side of the whiteboard is clean, rotate the board to clean the other side)
 
@@ -32,7 +32,7 @@ This aspect of the project deals with moving the whiteboard to a suitable locati
 
 #### Control Elements
 
-1.  Grasping the sponge to erase the whiteboard (how to grasp, and how to know we are successful?
+1.  Grasping the sponge to erase the whiteboard (how to grasp, and how to know we are successful?)
 2.  Applying the correct force to the normal surface of the whiteboard to ensure that the sponge is always in contact, but is still able to move to the left and right.
 3.  Monitors so that at any time a human can regain control of the system. This could be implemented by the human applying a force to the robot, or visually, when the camera detects a human in the frame. Robot should signal that it is ready to hand off control to the human.
 4.  While erasing with one arm, using the other arm to stabilize the whiteboard.
@@ -44,7 +44,6 @@ This aspect of the project deals with moving the whiteboard to a suitable locati
 3.  Distinguishing characters from each other, if we only want to erase parts of words or spelling mistakes.
 4.  Understand spacing between letters and be able to separate words.
 
-
 ## Other Decisions
 
 ### Camera: 
@@ -54,5 +53,5 @@ stereo camera mounted on a fixed frame in the middle of the two arms.
 
 ### Control mode: 
 Cartesian impedance. The idea is to put the desired position behind the board and have a relatively soft impedance in the direction perpendicular to the whiteboard surface to make sure the eraser stays in contact with it and at the same not push it backwards too much. In the two directions in the plane of the whiteboard the impedance should be higher to be able to overcome the friction and control the position of the eraser on the whiteboard with relatively high accuracy.
-- Advantages: 
-- Disadvantages: 
+- Advantages: Easy way to stay in contact with the whiteboard 
+- Disadvantages: Some experimenting will have to be done to figure out the magic numbers for the impedance in the different directions.
