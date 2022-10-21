@@ -17,9 +17,8 @@
 #include <math.h>
 
 // AACAL
-#include <aacal/thread/thread.h>
-#include <aacal/activity/activity.h>
-#include <coordination-libs/lcsm/lcsm.h>
+#include <five_c/thread/thread.h>
+#include <five_c/activity/activity.h>
 
 #include <iiwa_activity.hpp>
 
@@ -28,8 +27,8 @@
 
 
 bool *deinitialisation_request;
-int RUN = 1;
-int Prev = 1;
+double jnt_pos_save[7];
+FILE *fpt;
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -38,8 +37,6 @@ static void sigint_handler(int sig){
 		printf("\nDeinitialising iiwa activity\n");
 		*deinitialisation_request = true;
 	}
-	
-	RUN = 0;
 }
 
 void* set_actuation(void* activity){
@@ -51,18 +48,39 @@ void* set_actuation(void* activity){
 	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
 
 	while(!(*deinitialisation_request)){
-	if (iiwa_activity->lcsm.state == RUNNING){
-		// Copying data
-		pthread_mutex_lock(&coord_state->actuation_lock);
-		for (int i=0; i<5; i++){
-			params->iiwa_params.cmd_torques[i] = 0*Prev;
+		if (iiwa_activity->lcsm.state == RUNNING){
+			// Copying data
+			pthread_mutex_lock(&coord_state->actuation_lock);
+			for (int i=0; i<5; i++){
+				params->iiwa_params.cmd_torques[i] = 0;
+			}
+			params->iiwa_params.cmd_torques[5] = 0;
+			params->iiwa_params.cmd_torques[6] = 0;
+			pthread_mutex_unlock(&coord_state->actuation_lock);
 		}
-		params->iiwa_params.cmd_torques[5] = 0;
-		params->iiwa_params.cmd_torques[6] = 0;
-		pthread_mutex_unlock(&coord_state->actuation_lock);
-		// Prev = Prev*-1;
+		sleep(2);  // time in seconds
 	}
-	sleep(2);  // time in seconds
+}
+
+void* save_sensor_data(void* activity){
+	activity_t *iiwa_activity = (activity_t*) activity; 
+	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity->conf.params;
+	iiwa_activity_continuous_state_t *continuous_state =
+	(iiwa_activity_continuous_state_t *) iiwa_activity->state.computational_state.continuous;
+	iiwa_activity_coordination_state_t *coord_state =
+	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
+
+	while(!(*deinitialisation_request)){
+		printf("%f \n",continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques[0]);
+		if (iiwa_activity->lcsm.state == RUNNING){
+			fpt = fopen("jnt_pos.csv", "a+");
+			pthread_mutex_lock(&coord_state->sensor_lock);
+			memcpy(jnt_pos_save, continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos, 7 * sizeof(double));
+			pthread_mutex_unlock(&coord_state->sensor_lock);
+			fprintf(fpt, " %f, %f, %f, %f, %f, %f, %f \n", jnt_pos_save[0], jnt_pos_save[1], jnt_pos_save[2],
+															jnt_pos_save[3], jnt_pos_save[4], jnt_pos_save[5], jnt_pos_save[6]);
+			fclose(fpt);
+		}
 	}
 }
 
@@ -102,14 +120,16 @@ int main(int argc, char**argv){
 	// ### SHARED MEMORY ### //
 
 	// Create POSIX threads   
-	pthread_t pthread_iiwa, pthread_actuation;
+	pthread_t pthread_iiwa, pthread_actuation, phtread_saving;
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_activity);
+	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);
 	pthread_join(pthread_actuation, NULL);
+	pthread_join(phtread_saving, NULL);
 	
 	// Freeing memory
 	// ec_iiwa_activity.destroy_lcsm(&iiwa_activity);

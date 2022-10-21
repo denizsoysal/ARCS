@@ -16,7 +16,7 @@
 //******************************************************************************
 iiwaClient::iiwaClient(ESessionState *iiwa_sessionS)
 {	
-	_current_state = iiwa_sessionS;
+	// current_sesion_state = iiwa_sessionS;
 	// memcpy(cmd_jnt_pos, robotState().getMeasuredJointPosition(), LBRState::NUMBER_OF_JOINTS * sizeof(double));
 	for(unsigned i=0; i<LBRState::NUMBER_OF_JOINTS; i++)
 		cmd_jnt_pos[i] = 0.0;
@@ -42,29 +42,29 @@ void iiwaClient::onStateChange(ESessionState oldState, ESessionState newState)
 	{
 		case MONITORING_WAIT:
 		{
-			*_current_state = newState;
+			current_sesion_state = newState;
 			break;
 		}       
 		case MONITORING_READY:
 		{
 			this->getContinousState();
 			memcpy(cmd_jnt_pos, meas_jnt_pos, LBRState::NUMBER_OF_JOINTS * sizeof(double));
-			*_current_state = newState;
+			current_sesion_state = newState;
 			break;
 		}
 		case COMMANDING_WAIT:
 		{
-			*_current_state = newState;
+			current_sesion_state = newState;
 			break;
 		}   
 		case COMMANDING_ACTIVE:
 		{
-			*_current_state = newState;
+			current_sesion_state = newState;
 			break;
 		}
 		default:
 		{
-			*_current_state = newState;
+			current_sesion_state = newState;
 			break;
 		}
 	}

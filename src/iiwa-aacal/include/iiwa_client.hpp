@@ -64,7 +64,7 @@ public:
 	virtual void command();
 
 	// 
-	ESessionState *_current_state;
+	// ESessionState *_current_state;
 	static const int CART_VECTOR_DIM = 6;     //!< number of elements in a Cartesian vector
     double meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
     double meas_torques[LBRState::NUMBER_OF_JOINTS];

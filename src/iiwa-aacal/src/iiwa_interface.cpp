@@ -45,14 +45,14 @@ void iiwa_state_cleanup(iiwa_state_t *iiwa_state)
 }
 
 // Create connection with the robot
-bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state, iiwa_discrete_state_t *iiwa_discrete_state)
+bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state)
 {
 	bool command_success;
 	printf("Connecting to iiwa robot \n");
 	printf("IP: %s , PORT: %d \n", iiwa_params->fri_ip, iiwa_params->fri_port);
 	bool connected = iiwa_state->app->connect(iiwa_params->fri_port, iiwa_params->fri_ip);
 	// TODO: Add timeout to while statement.
-	while(iiwa_discrete_state->iiwa_current_sesion_state != MONITORING_READY){
+	while(iiwa_state->client->current_sesion_state != MONITORING_READY){
 		command_success = iiwa_state->app->step();
 	}
 	// Initialize the joint positions to the intial 
@@ -66,12 +66,16 @@ bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state, iiwa_dis
 
 void iiwa_step(iiwa_state_t *iiwa_state)
 {
-	iiwa_state->app->step();
+	// iiwa_state->app->step();
+	// To avoid code lock
+	if(iiwa_state->client->current_sesion_state != IDLE){
+		iiwa_state->app->step();
+	}
 }
 
 bool iiwa_communicate(iiwa_state_t *iiwa_state)
 {
-	bool command_success = iiwa_state->app->step();
+	// bool command_success = iiwa_state->app->step();
 	// TODO: CHECK!!!!
 	if (iiwa_state->client->current_sesion_state == COMMANDING_ACTIVE) {
 		switch(iiwa_state->client->robotState().getClientCommandMode()) {
@@ -103,10 +107,27 @@ bool iiwa_communicate(iiwa_state_t *iiwa_state)
 	iiwa_state->client->getContinousState();
 	iiwa_state->client->getDiscreteState();
 	
-	return command_success;
+	return true;
 }
 
 void iiwa_disconnect(iiwa_state_t *iiwa_state)
 {
-	iiwa_state->app->disconnect();
+	if(iiwa_state->client->current_sesion_state != IDLE){
+		iiwa_state->app->disconnect();
+	}
+}
+
+bool iiwa_check_commanding_mode(iiwa_state_t *iiwa_state, EClientCommandMode desired_command_mode)
+{
+	if(iiwa_state->client->current_sesion_state != IDLE){
+		iiwa_state->app->step();
+		iiwa_state->client->getDiscreteState();
+	}
+
+	if(iiwa_state->client->commanding_mode == desired_command_mode){
+		return true;
+	}
+	else{
+		return false;
+	}
 }

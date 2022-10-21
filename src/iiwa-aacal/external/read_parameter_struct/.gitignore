@@ -1,7 +1,0 @@
-**/build
-**/CMakeFiles
-*read_test
-*Makefile
-*cmake_install.cmake 
-*CMakeCache.txt
-*libreadfile.a

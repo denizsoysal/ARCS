@@ -1,67 +1,59 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(iiwa-aacal VERSION 0.0.1 LANGUAGES C CXX)
 
-# Get the project name in capital letters
-# for the lib namespace
-string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_CAPS)
-
-# Options. Turn on with 'cmake -DBUILD_TESTING=ON'.
-option(BUILD_TESTING "Build all tests." OFF)
-option(BUILD_EXAMPLES "Build all examples." OFF)
+message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) 
 
 set(CMAKE_BUILD_TYPE Debug)
+
+############
+## Option ##
+############
+option(STAND_ALONE "Compile this package outside a higher lever repository" OFF)
 
 ###########
 ## Build ##
 ###########
+## KUKA SDK specific
+set(KUKA_FRI_SDK ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/)
+set(FRISDK_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/include)
+set(FRISDK_LIB ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/lib)
+add_custom_target(kuka_fri_sdk COMMAND make clean && make
+                   WORKING_DIRECTORY ${KUKA_FRI_SDK}/build/GNUMake
+)
 
-# option(STAND_ALONE "Compile this package outside a higher lever repository" OFF)
-option(STAND_ALONE "Compile this package outside a higher lever repository" ON)
-
-message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) 
-# Rebuild the lidar each time cmake is invoked
-
-if(STAND_ALONE)
-    set(UTHashIncludeDir ${CMAKE_SOURCE_DIR}/external/uthash/include)
-    set(CJSONLibIncludeDir ${CMAKE_SOURCE_DIR}/external/cJSON)
-    set(ReadParameterLibIncludeDir ${CMAKE_SOURCE_DIR}/external/read_parameter_struct/include)
-    set(CoordLibIncludeDir ${CMAKE_SOURCE_DIR}/external/coordination_libraries/include)
-    set(AACALibIncludeDir ${CMAKE_SOURCE_DIR}/external/algorithm_and_activity_component_architecture/include)
-    set(DataStructLibIncludeDir ${CMAKE_SOURCE_DIR}/external/data-structure-aacal/include)
-    ## KUKA SDK specific
-    set(KUKA_FRI_SDK ${CMAKE_SOURCE_DIR}/external/kuka_fri_sdk/)
-    set(FRISDK_INCLUDE ${CMAKE_SOURCE_DIR}/external/kuka_fri_sdk/include)
-    set(FRISDK_LIB ${CMAKE_SOURCE_DIR}/external/kuka_fri_sdk/lib)
-
-    add_subdirectory(external/cJSON)
-    add_subdirectory(external/read_parameter_struct)
-    add_subdirectory(external/coordination_libraries)
-    add_subdirectory(external/algorithm_and_activity_component_architecture)
-    add_subdirectory(external/data-structure-aacal)
-endif()
-
-include_directories(${FRISDK_INCLUDE})
-link_directories(${FRISDK_LIB})
+# ROB-KUL libraries
+include(FetchContent)
+FetchContent_Declare(five-c
+    GIT_REPOSITORY git@gitlab.kuleuven.be:u0144428/algorithm_and_activity_component_architecture.git
+    GIT_TAG repo/organization
+    TIMEOUT 5
+    INSTALL_COMMAND ""
+)
+FetchContent_MakeAvailable(five-c)
+FetchContent_GetProperties(five-c
+    SOURCE_DIR FIVE_C_SOURCE_DIR
+    BINARY_DIR FIVE_C_BUILD_DIR
+)
+set(FIVE_C_INCLUDE_DIR ${FIVE_C_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
     src/iiwa_client.cpp
     src/iiwa_interface.cpp
     src/iiwa_activity.cpp
 )
+add_dependencies(${PROJECT_NAME} five_c kuka_fri_sdk)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${AACALibIncludeDir}>
-        $<BUILD_INTERFACE:${DataStructLibIncludeDir}>
-        $<BUILD_INTERFACE:${ReadParameterLibIncludeDir}>
+        $<BUILD_INTERFACE:${FIVE_C_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${FRISDK_INCLUDE}>
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    aaca-lib
-    data-structure-aacal
-    /home/fulloa/AACAL/iiwa-aacal/external/kuka_fri_sdk/lib/libFRIClient.so
+    five_c
+    ${FRISDK_LIB}/libFRIClient.so
 )
 
 if(STAND_ALONE)
@@ -69,12 +61,9 @@ if(STAND_ALONE)
     target_link_libraries(iiwa_demo PRIVATE
         ${PROJECT_NAME}
         pthread
-        aaca-lib
-        data-structure-aacal
-        /home/fulloa/AACAL/iiwa-aacal/external/kuka_fri_sdk/lib/libFRIClient.so
-
+        five_c
+        ${FRISDK_LIB}/libFRIClient.so
         )    
-
 endif()
 
 

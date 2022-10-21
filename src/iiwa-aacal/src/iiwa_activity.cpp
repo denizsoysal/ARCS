@@ -14,7 +14,6 @@
 #include <time.h>
 
 #include "iiwa_activity.hpp"
-#include <aacal/thread/thread.h>
 #include <iostream>
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 
@@ -77,7 +76,7 @@ void iiwa_activity_creation_configure(activity_t *activity){
 	}
 }
 
-// Allocate memory here
+// Allocating memory here
 void iiwa_activity_creation_compute(activity_t *activity){
 	iiwa_activity_continuous_state_t *continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
@@ -122,6 +121,11 @@ void iiwa_activity_cleaning(activity_t *activity){
 
 // Resource configuration
 void iiwa_activity_resource_configuration_coordinate(activity_t *activity){
+	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
+	// Coordinating with other activities
+	if (coord_state->deinitialisation_request)
+		activity->state.lcsm_protocol = DEINITIALISATION;
+	
 	// Coordinating own activity
 	if (activity->state.lcsm_flags.creation_complete)
 		switch (activity->state.lcsm_protocol){ 
@@ -155,15 +159,12 @@ void iiwa_activity_resource_configuration_compute(activity_t *activity){
 	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
 	switch (activity->state.lcsm_protocol){
 		case INITIALISATION:
-			// TODO: This should be outside the activity (Parameter setting)
-			
-			if (iiwa_connect(&params->iiwa_params, &continuous_state->iiwa_state, &discrete_state->iiwa_discrete_state)){
+			if (iiwa_connect(&params->iiwa_params, &continuous_state->iiwa_state)){
 				printf("[iiwa activity] Succesfully connected iiwa robot\n");
 				activity->state.lcsm_flags.resource_configuration_complete = true;
 			}
 			break;
 		case DEINITIALISATION:
-			printf("Deinitialization \n");
 			// TODO: In iiwa disconect check the latest state of the robot to avoid code lock
 			iiwa_disconnect(&continuous_state->iiwa_state);
 			activity->state.lcsm_flags.resource_configuration_complete = true;
@@ -180,6 +181,8 @@ void iiwa_activity_resource_configuration(activity_t *activity){
 // capability configuration
 void iiwa_activity_capability_configuration_coordinate(activity_t *activity){
 	iiwa_activity_coordination_state_t * coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
+	// if (coord_state->execution_request)
+	// 	activity->state.lcsm_protocol = EXECUTION;
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
 
@@ -213,30 +216,15 @@ void iiwa_activity_capability_configuration_compute(activity_t *activity){
 	// Connect to iiwa robot
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) activity->conf.params;
 	iiwa_activity_continuous_state_t* continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
-	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
-	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
 	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
 
 	switch (activity->state.lcsm_protocol){
 		case INITIALISATION:
-			// std::cout << discrete_state->iiwa_discrete_state.iiwa_commanding_mode << " commanding" << std::endl;
-			// std::cout << params->iiwa_params.cmd_mode << " commanding2" << std::endl;
-			if (params->iiwa_params.cmd_mode == discrete_state->iiwa_discrete_state.iiwa_commanding_mode){
-				printf("Same commanding mode \n");
+			if (iiwa_check_commanding_mode(&continuous_state->iiwa_state, params->iiwa_params.cmd_mode)){
 				activity->state.lcsm_flags.capability_configuration_complete = true;
 			}
-			else if (discrete_state->iiwa_discrete_state.iiwa_commanding_mode == NO_COMMAND_MODE){
-				iiwa_step(&continuous_state->iiwa_state);
-				iiwa_communicate(&continuous_state->iiwa_state);
-
-				pthread_mutex_lock(&coord_state->sensor_lock);
-				discrete_state->iiwa_discrete_state.iiwa_commanding_mode = iiwa_state->client->commanding_mode;
-				discrete_state->iiwa_discrete_state.iiwa_current_sesion_state = iiwa_state->client->current_sesion_state;
-				discrete_state->iiwa_discrete_state.iiwa_connection_quality = iiwa_state->client->connection_quality;
-				pthread_mutex_unlock(&coord_state->sensor_lock);
-			}
-			else {
-				printf("Commanding mode different, deinitializing \n");
+			else if (continuous_state->iiwa_state.client->commanding_mode != NO_COMMAND_MODE){
+				printf("[ERROR] Commanding mode different, deinitializing \n");
 				activity->state.lcsm_protocol = DEINITIALISATION;
 			}
 			break;
@@ -260,7 +248,7 @@ void iiwa_activity_pausing_compute(activity_t *activity){
 
 void iiwa_activity_pausing_coordinate(activity_t *activity){
 	iiwa_activity_coordination_state_t * coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
-	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
+	iiwa_activity_continuous_state_t *continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	// Coordinating with other activities
 	if (coord_state->execution_request)
 		activity->state.lcsm_protocol = EXECUTION;
@@ -269,7 +257,7 @@ void iiwa_activity_pausing_coordinate(activity_t *activity){
 	// Coordinating own activity
 	switch (activity->state.lcsm_protocol){ 
 		case EXECUTION:
-			if (discrete_state->iiwa_discrete_state.iiwa_current_sesion_state == COMMANDING_WAIT){
+			if (continuous_state->iiwa_state.client->current_sesion_state == COMMANDING_WAIT){
 				activity->lcsm.state = RUNNING;
 			}
 			break;
@@ -301,9 +289,11 @@ void iiwa_activity_running_communicate(activity_t *activity){
 	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
 	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
 	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
-	
-	if ((discrete_state->iiwa_discrete_state.iiwa_current_sesion_state == MONITORING_READY) || 
-										(discrete_state->iiwa_discrete_state.iiwa_current_sesion_state == IDLE))
+
+	iiwa_step(&continuous_state->iiwa_state);
+
+	if ((continuous_state->iiwa_state.client->current_sesion_state == MONITORING_READY) || 
+										(continuous_state->iiwa_state.client->current_sesion_state == IDLE))
 	{
 		coord_state->commanding_not_active = true;
 		return;
@@ -338,6 +328,7 @@ void iiwa_activity_running_communicate(activity_t *activity){
 	iiwa_communicate(&continuous_state->iiwa_state);
 
 	pthread_mutex_lock(&coord_state->sensor_lock);
+	
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		iiwa_state->iiwa_sensors.meas_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
 		iiwa_state->iiwa_sensors.meas_torques[i] = iiwa_state->client->meas_torques[i];
@@ -347,6 +338,7 @@ void iiwa_activity_running_communicate(activity_t *activity){
 	discrete_state->iiwa_discrete_state.iiwa_commanding_mode = iiwa_state->client->commanding_mode;
 	discrete_state->iiwa_discrete_state.iiwa_current_sesion_state = iiwa_state->client->current_sesion_state;
 	discrete_state->iiwa_discrete_state.iiwa_connection_quality = iiwa_state->client->connection_quality;
+	
 	pthread_mutex_unlock(&coord_state->sensor_lock);
 
 }

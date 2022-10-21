@@ -1,3 +1,0 @@
-[submodule "extern/cJSON"]
-	path = extern/cJSON
-	url = https://github.com/DaveGamble/cJSON.git

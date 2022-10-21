@@ -61,10 +61,11 @@ typedef struct iiwa_params_s{
 
 void iiwa_init(iiwa_state_t *iiwa_state, iiwa_discrete_state_t *iiwa_discrete_state);
 void iiwa_state_cleanup(iiwa_state_t *iiwa_state);
-bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state, iiwa_discrete_state_t *iiwa_discrete_state);
+bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state);
 void iiwa_disconnect(iiwa_state_t *iiwa_state);
 bool iiwa_communicate(iiwa_state_t *iiwa_state);
 void iiwa_step(iiwa_state_t *iiwa_state);
+bool iiwa_check_commanding_mode(iiwa_state_t *iiwa_state, EClientCommandMode desired_command_mode);
 
 
 #endif //IIWA_INTERFACE_HPP
