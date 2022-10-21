@@ -56,15 +56,15 @@ void* set_actuation(void* activity){
 	// Read the initial joint position
 	pthread_mutex_lock(&coord_state->sensor_lock);
     j7_pos_0 = continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos[6];
-	pthread_mutex_unlock(&coord_state->actuation_lock);
+	pthread_mutex_unlock(&coord_state->sensor_lock);
 
 	while(!(*deinitialisation_request)){
 		if (iiwa_activity->lcsm.state == RUNNING){
 			traj_time = traj_time + inc;
 			// Copying data
-			pthread_mutex_lock(&coord_state->actuation_lock);
-			params->iiwa_params.cmd_jnt_pos[6] = j7_pos_0 + 3.14 / 6 * sin(2 * 3.14 / period * traj_time);
-			pthread_mutex_unlock(&coord_state->actuation_lock);
+			// pthread_mutex_lock(&coord_state->actuation_lock);
+			// params->iiwa_params.cmd_jnt_pos[6] = j7_pos_0 + 3.14 / 6 * sin(2 * 3.14 / period * traj_time);
+			// pthread_mutex_unlock(&coord_state->actuation_lock);
 		}
 		sleep(inc);  // time in seconds
 	}
