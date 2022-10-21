@@ -1,0 +1,23 @@
+{
+    "a1": 10,
+    "a2": 15,
+    "a3": 20,
+    "b1": -10.1,
+    "b2": -83.1,
+    "b3": -25.1,
+    "c1": "test",
+    "c2": "20",
+    "c3": "input/path/to/nothing/like/there/is/no/file/here/you/shouldn't/look/its/unnecessary.file",
+    "array":    
+        {
+            "d1": 1,
+            "d2": 1.2,
+            "d3": "abc",
+            "arrayception":    
+            {
+                "e1": 10,
+                "e2": 10.2,
+                "e3": "def"
+            }
+        }
+}
