@@ -29,6 +29,7 @@
 bool *deinitialisation_request;
 double jnt_pos_save[7];
 FILE *fpt;
+double traj_time;
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -40,6 +41,11 @@ static void sigint_handler(int sig){
 }
 
 void* set_actuation(void* activity){
+    double j7_pos_0; 
+	double inc = 0.1; //seconds
+	double period = 2; //seconds
+	traj_time = 0;
+
 	activity_t *iiwa_activity = (activity_t*) activity; 
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity->conf.params;
 	iiwa_activity_continuous_state_t *continuous_state =
@@ -47,18 +53,20 @@ void* set_actuation(void* activity){
 	iiwa_activity_coordination_state_t *coord_state =
 	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
 
+	// Read the initial joint position
+	pthread_mutex_lock(&coord_state->sensor_lock);
+    j7_pos_0 = continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos[6];
+	pthread_mutex_unlock(&coord_state->actuation_lock);
+
 	while(!(*deinitialisation_request)){
 		if (iiwa_activity->lcsm.state == RUNNING){
+			traj_time = traj_time + inc;
 			// Copying data
 			pthread_mutex_lock(&coord_state->actuation_lock);
-			for (int i=0; i<5; i++){
-				params->iiwa_params.cmd_torques[i] = 0;
-			}
-			params->iiwa_params.cmd_torques[5] = 0;
-			params->iiwa_params.cmd_torques[6] = 0;
+			params->iiwa_params.cmd_jnt_pos[6] = j7_pos_0 + 3.14 / 6 * sin(2 * 3.14 / period * traj_time);
 			pthread_mutex_unlock(&coord_state->actuation_lock);
 		}
-		sleep(2);  // time in seconds
+		sleep(inc);  // time in seconds
 	}
 }
 
