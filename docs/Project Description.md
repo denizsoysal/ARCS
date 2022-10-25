@@ -4,6 +4,7 @@ The erasing will be done with one arm while holding the whiteboard with the othe
 Additional skills that can be added are to:
 - only erase specific letters/words,
 - turn the whiteboard 180° and also erase the other side.
+
 Finally, everything should be done while avoiding obstacles. The robot arms should avoid obstacles themselves but should also make sure the whiteboard does not collide with anything while moving it.
 
 ## Actions
@@ -62,6 +63,7 @@ Cartesian impedance. The idea is to put the desired position behind the board an
 ## What makes this project advanced?
 - Coordination between two separate robot arms
 - Decision making: where to move the whiteboard, what to erase
+- Combination of multiple sensors, namely the RGBD camera and the force sensors in the robot arms
 
 ## What makes this project relevant?
 - Manipulating larger objects by coordination of multiple robot arms
