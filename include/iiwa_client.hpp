@@ -72,7 +72,7 @@ public:
     double cmd_jnt_pos[LBRState::NUMBER_OF_JOINTS];
     double cmd_torques[LBRState::NUMBER_OF_JOINTS];
     double cmd_wrench[CART_VECTOR_DIM];
-	ESessionState			current_sesion_state;
+	ESessionState			current_session_state;
 	EClientCommandMode		commanding_mode;
 	EConnectionQuality		connection_quality;
 

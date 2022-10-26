@@ -29,7 +29,7 @@
 bool *deinitialisation_request;
 double jnt_pos_save[7];
 FILE *fpt;
-double t = 0;
+double traj_time;
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -41,6 +41,13 @@ static void sigint_handler(int sig){
 }
 
 void* set_actuation(void* activity){
+    double j7_pos_0 = 0.0; 
+
+	double test_p;
+	double inc = 0.004; //seconds
+	double period = 10; //seconds
+	traj_time = 0;
+
 	activity_t *iiwa_activity = (activity_t*) activity; 
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity->conf.params;
 	iiwa_activity_continuous_state_t *continuous_state =
@@ -48,24 +55,24 @@ void* set_actuation(void* activity){
 	iiwa_activity_coordination_state_t *coord_state =
 	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
 
-	int dt = 10; // ms
-	
+
 	while(!(*deinitialisation_request)){
-		usleep(1000*dt);  // time in microseconds
+		// if (iiwa_activity->lcsm.state == PAUSING){
+		// 	// Read the initial joint position
+		// 	pthread_mutex_lock(&coord_state->sensor_lock);
+		// 	j7_pos_0 = continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos[6];
+		// 	pthread_mutex_unlock(&coord_state->sensor_lock);
+		// }
 		if (iiwa_activity->lcsm.state == RUNNING){
+			traj_time = traj_time + inc;
 			// Copying data
 			pthread_mutex_lock(&coord_state->actuation_lock);
-			params->iiwa_params.cmd_jnt_vel[0] = 0;
-			params->iiwa_params.cmd_jnt_vel[1] = 0;
-			params->iiwa_params.cmd_jnt_vel[2] = 0;
-			params->iiwa_params.cmd_jnt_vel[3] = 0;
-			params->iiwa_params.cmd_jnt_vel[4] = 0;
-			params->iiwa_params.cmd_jnt_vel[5] = 0;
-			params->iiwa_params.cmd_jnt_vel[6] = -(3.1416*2.0*3.1416*0.3/4.0)*sin(0.3*2.0*3.1416*t);
+			params->iiwa_params.cmd_jnt_pos[6] = j7_pos_0 + 3.14 / 6 * sin(2 * 3.14 * traj_time / period );
 			pthread_mutex_unlock(&coord_state->actuation_lock);
-			t += (double)dt/1000;
-			// printf("%f\n", t);
+			test_p = j7_pos_0 + 3.14 / 6 * sin(2 * 3.14 * traj_time / period );
+			printf("%f\n",test_p);
 		}
+		usleep(inc*1000000);  // time in seconds
 	}
 }
 
@@ -78,14 +85,13 @@ void* save_sensor_data(void* activity){
 	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
 
 	while(!(*deinitialisation_request)){
+		printf("%f \n",continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques[0]);
 		if (iiwa_activity->lcsm.state == RUNNING){
-			usleep(4*1000);
-			pthread_mutex_lock(&coord_state->sensor_lock);
-			memcpy(jnt_pos_save, continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos, LBRState::NUMBER_OF_JOINTS * sizeof(double));
-			pthread_mutex_unlock(&coord_state->sensor_lock);
-			// Saving to a file
 			fpt = fopen("jnt_pos.csv", "a+");
-			fprintf(fpt, "%f, %f, %f, %f, %f, %f, %f \n", jnt_pos_save[0], jnt_pos_save[1], jnt_pos_save[2],
+			pthread_mutex_lock(&coord_state->sensor_lock);
+			memcpy(jnt_pos_save, continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos, 7 * sizeof(double));
+			pthread_mutex_unlock(&coord_state->sensor_lock);
+			fprintf(fpt, " %f, %f, %f, %f, %f, %f, %f \n", jnt_pos_save[0], jnt_pos_save[1], jnt_pos_save[2],
 															jnt_pos_save[3], jnt_pos_save[4], jnt_pos_save[5], jnt_pos_save[6]);
 			fclose(fpt);
 		}
@@ -120,8 +126,7 @@ int main(int argc, char**argv){
 	thread_t thread_iiwa;
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
-	// Is it possible to get the thread frequency inside the thread?
-	create_thread(&thread_iiwa, "thread_iiwa", 4); // 4 ms this should be lower than sunrise setup
+	create_thread(&thread_iiwa, "thread_iiwa", 4); // 4 ms
 
 	// Register activities in threads
 	register_activity(&thread_iiwa, &iiwa_activity, "iiwa_activity");
@@ -133,7 +138,7 @@ int main(int argc, char**argv){
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_activity);
-	pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_activity);
+	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);

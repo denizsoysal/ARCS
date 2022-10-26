@@ -27,7 +27,7 @@ static const int CART_VECTOR_DIM = 6;
 
 typedef struct iiwa_state_s{
 	struct iiwa_actuation_input_s{
-		double 			cmd_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+		double 			cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 		double 			cmd_torques[LBRState::NUMBER_OF_JOINTS];
 		double 			cmd_wrench[CART_VECTOR_DIM];
 	}iiwa_actuation_input;
@@ -38,14 +38,14 @@ typedef struct iiwa_state_s{
 		double 			meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
 	}iiwa_sensors;
 
-	iiwaClient         	*client, cclient;
-	UdpConnection     	*connection, cconnection;
+	iiwaClient         	*client;
+	UdpConnection     	*connection;
 	ClientApplication	*app;
 
 }iiwa_state_t;
 
 typedef struct iiwa_discrete_state_s{
-	ESessionState			iiwa_current_sesion_state;
+	ESessionState			iiwa_current_session_state;
 	EClientCommandMode		iiwa_commanding_mode;
 	EConnectionQuality		iiwa_connection_quality;
 }iiwa_discrete_state_t;
@@ -54,7 +54,7 @@ typedef struct iiwa_params_s{
 	char					fri_ip[20];
 	unsigned int			fri_port;
 	EClientCommandMode		cmd_mode;
-	double 					cmd_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+	double 					cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 	double 					cmd_torques[LBRState::NUMBER_OF_JOINTS];
 	double 					cmd_wrench[CART_VECTOR_DIM];
 }iiwa_params_t;

@@ -15,6 +15,8 @@
 
 #include "iiwa_activity.hpp"
 #include <iostream>
+
+FILE *fpt;
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 
  * so it properly configures the schedule for the next iteration according
@@ -257,7 +259,7 @@ void iiwa_activity_pausing_coordinate(activity_t *activity){
 	// Coordinating own activity
 	switch (activity->state.lcsm_protocol){ 
 		case EXECUTION:
-			if (continuous_state->iiwa_state.client->current_sesion_state == COMMANDING_WAIT){
+			if (continuous_state->iiwa_state.client->current_session_state == COMMANDING_ACTIVE){
 				activity->lcsm.state = RUNNING;
 			}
 			break;
@@ -290,12 +292,10 @@ void iiwa_activity_running_communicate(activity_t *activity){
 	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
 	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
 
-	iiwa_step(&continuous_state->iiwa_state);
-
-	if ((continuous_state->iiwa_state.client->current_sesion_state == MONITORING_READY) || 
-										(continuous_state->iiwa_state.client->current_sesion_state == IDLE))
+	if ((continuous_state->iiwa_state.client->current_session_state == MONITORING_READY) || 
+										(continuous_state->iiwa_state.client->current_session_state == IDLE))
 	{
-		coord_state->commanding_not_active = true;
+		coord_state->commanding_not_active = true;   
 		return;
 	}
 
@@ -305,7 +305,7 @@ void iiwa_activity_running_communicate(activity_t *activity){
 		case POSITION:
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
-				iiwa_state->iiwa_actuation_input.cmd_jnt_pos[i] = params->iiwa_params.cmd_jnt_pos[i];
+				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i] = params->iiwa_params.cmd_jnt_vel[i];
 			}
 			break;
 		
@@ -317,28 +317,26 @@ void iiwa_activity_running_communicate(activity_t *activity){
 			break;
 
 		case WRENCH:
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
 			{
 				iiwa_state->iiwa_actuation_input.cmd_wrench[i] = params->iiwa_params.cmd_wrench[i];
 			}
 			break;
 	}
 	pthread_mutex_unlock(&coord_state->actuation_lock);
-
-	iiwa_communicate(&continuous_state->iiwa_state);
-
-	pthread_mutex_lock(&coord_state->sensor_lock);
+	iiwa_step(&continuous_state->iiwa_state);
 	
+	iiwa_communicate(&continuous_state->iiwa_state);
+	
+	pthread_mutex_lock(&coord_state->sensor_lock);
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
 		iiwa_state->iiwa_sensors.meas_torques[i] = iiwa_state->client->meas_torques[i];
 		iiwa_state->iiwa_sensors.meas_ext_torques[i] = iiwa_state->client->meas_ext_torques[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
 	}
-
 	discrete_state->iiwa_discrete_state.iiwa_commanding_mode = iiwa_state->client->commanding_mode;
-	discrete_state->iiwa_discrete_state.iiwa_current_sesion_state = iiwa_state->client->current_sesion_state;
+	discrete_state->iiwa_discrete_state.iiwa_current_session_state = iiwa_state->client->current_session_state;
 	discrete_state->iiwa_discrete_state.iiwa_connection_quality = iiwa_state->client->connection_quality;
-	
 	pthread_mutex_unlock(&coord_state->sensor_lock);
 
 }

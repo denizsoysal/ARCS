@@ -19,7 +19,7 @@
 void iiwa_init(iiwa_state_t *iiwa_state, iiwa_discrete_state_t *iiwa_discrete_state)
 {
 	UdpConnection *connection = new UdpConnection;
-	iiwaClient *client = new iiwaClient(&iiwa_discrete_state->iiwa_current_sesion_state);
+	iiwaClient *client = new iiwaClient(&iiwa_discrete_state->iiwa_current_session_state);
 	ClientApplication *app = new ClientApplication(*connection, *client);
 
 	// The code below works
@@ -52,15 +52,14 @@ bool iiwa_connect(iiwa_params_t *iiwa_params, iiwa_state_t *iiwa_state)
 	printf("IP: %s , PORT: %d \n", iiwa_params->fri_ip, iiwa_params->fri_port);
 	bool connected = iiwa_state->app->connect(iiwa_params->fri_port, iiwa_params->fri_ip);
 	// TODO: Add timeout to while statement.
-	while(iiwa_state->client->current_sesion_state != MONITORING_READY){
+	while(iiwa_state->client->current_session_state != MONITORING_READY){
 		command_success = iiwa_state->app->step();
 	}
 	// Initialize the joint positions to the intial 
 	// position of the robot (So you can start it from any configuration)
-	for (unsigned int i=0; i<LBRState::NUMBER_OF_JOINTS; i++)
-	{
-		iiwa_params->cmd_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
-	}
+	iiwa_state->client->getContinousState();
+
+	printf("%f\n", iiwa_state->client->robotState().getSampleTime());
 	return true;
 }
 
@@ -68,7 +67,7 @@ void iiwa_step(iiwa_state_t *iiwa_state)
 {
 	// iiwa_state->app->step();
 	// To avoid code lock
-	if(iiwa_state->client->current_sesion_state != IDLE){
+	if(iiwa_state->client->current_session_state != IDLE){
 		iiwa_state->app->step();
 	}
 }
@@ -77,12 +76,13 @@ bool iiwa_communicate(iiwa_state_t *iiwa_state)
 {
 	// bool command_success = iiwa_state->app->step();
 	// TODO: CHECK!!!!
-	if (iiwa_state->client->current_sesion_state == COMMANDING_ACTIVE) {
+	if (iiwa_state->client->current_session_state == COMMANDING_ACTIVE) {
 		switch(iiwa_state->client->robotState().getClientCommandMode()) {
 			case POSITION: { // Position MODE
 				for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 				{
-					iiwa_state->client->cmd_jnt_pos[i] = iiwa_state->iiwa_actuation_input.cmd_jnt_pos[i];
+					iiwa_state->client->cmd_jnt_pos[i] += iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i]
+																* iiwa_state->client->robotState().getSampleTime();
 				} 
 				break;
 			}
@@ -112,14 +112,14 @@ bool iiwa_communicate(iiwa_state_t *iiwa_state)
 
 void iiwa_disconnect(iiwa_state_t *iiwa_state)
 {
-	if(iiwa_state->client->current_sesion_state != IDLE){
+	if(iiwa_state->client->current_session_state != IDLE){
 		iiwa_state->app->disconnect();
 	}
 }
 
 bool iiwa_check_commanding_mode(iiwa_state_t *iiwa_state, EClientCommandMode desired_command_mode)
 {
-	if(iiwa_state->client->current_sesion_state != IDLE){
+	if(iiwa_state->client->current_session_state != IDLE){
 		iiwa_state->app->step();
 		iiwa_state->client->getDiscreteState();
 	}
