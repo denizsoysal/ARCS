@@ -285,7 +285,7 @@ void iiwa_activity_pausing(activity_t *activity){
 }
 
 // Running
-void iiwa_activity_running_communicate(activity_t *activity){
+void iiwa_activity_running_communicate_first_round(activity_t *activity){
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) activity->conf.params;
 	iiwa_activity_continuous_state_t *continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
@@ -299,7 +299,42 @@ void iiwa_activity_running_communicate(activity_t *activity){
 		return;
 	}
 
-	pthread_mutex_lock(&coord_state->actuation_lock);
+    // Read the sensors from iiwa
+	pthread_mutex_lock(&coord_state->sensor_lock);
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		iiwa_state->iiwa_sensors.meas_torques[i] = iiwa_state->client->meas_torques[i];
+		iiwa_state->iiwa_sensors.meas_ext_torques[i] = iiwa_state->client->meas_ext_torques[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
+	}
+	discrete_state->iiwa_discrete_state.iiwa_commanding_mode = iiwa_state->client->commanding_mode;
+	discrete_state->iiwa_discrete_state.iiwa_current_session_state = iiwa_state->client->current_session_state;
+	discrete_state->iiwa_discrete_state.iiwa_connection_quality = iiwa_state->client->connection_quality;
+	pthread_mutex_unlock(&coord_state->sensor_lock);
+
+	// Read the goal from OTHER activity
+	pthread_mutex_lock(coord_state->goal_lock);
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		params->local_goal_jnt_pos[i] = *params->goal_jnt_pos[i];
+	}
+	pthread_mutex_unlock(coord_state->goal_lock);
+
+}
+
+void iiwa_activity_running_communicate_second_round(activity_t *activity){
+	iiwa_activity_params_t* params = (iiwa_activity_params_t *) activity->conf.params;
+	iiwa_activity_continuous_state_t *continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
+	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
+	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
+
+    if ((continuous_state->iiwa_state.client->current_session_state == MONITORING_READY) || 
+										(continuous_state->iiwa_state.client->current_session_state == IDLE))
+	{
+		coord_state->commanding_not_active = true;   
+		return;
+	}
+
+    pthread_mutex_lock(&coord_state->actuation_lock);
 	switch (discrete_state->iiwa_discrete_state.iiwa_commanding_mode)
 	{
 		case POSITION:
@@ -327,17 +362,6 @@ void iiwa_activity_running_communicate(activity_t *activity){
 	iiwa_step(&continuous_state->iiwa_state);
 	
 	iiwa_communicate(&continuous_state->iiwa_state);
-	
-	pthread_mutex_lock(&coord_state->sensor_lock);
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_torques[i] = iiwa_state->client->meas_torques[i];
-		iiwa_state->iiwa_sensors.meas_ext_torques[i] = iiwa_state->client->meas_ext_torques[i];
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] = iiwa_state->client->meas_jnt_pos[i];
-	}
-	discrete_state->iiwa_discrete_state.iiwa_commanding_mode = iiwa_state->client->commanding_mode;
-	discrete_state->iiwa_discrete_state.iiwa_current_session_state = iiwa_state->client->current_session_state;
-	discrete_state->iiwa_discrete_state.iiwa_connection_quality = iiwa_state->client->connection_quality;
-	pthread_mutex_unlock(&coord_state->sensor_lock);
 
 }
 
@@ -370,10 +394,24 @@ void iiwa_activity_running_configure(activity_t *activity){
 	}
 }
 
+void iiwa_activity_running_compute(activity_t *activity){
+	iiwa_activity_params_t* params = (iiwa_activity_params_t *) activity->conf.params;
+	iiwa_activity_continuous_state_t *continuous_state = (iiwa_activity_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_activity_discrete_state_t *discrete_state = (iiwa_activity_discrete_state_t *) activity->state.computational_state.discrete;
+	iiwa_activity_coordination_state_t *coord_state = (iiwa_activity_coordination_state_t *) activity->state.coordination_state;
+	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
+	double magic_gain = 0.1;
+
+    // control only the desired joint for now...
+	params->iiwa_params.cmd_jnt_vel[6] = magic_gain * (params->local_goal_jnt_pos[6] - iiwa_state->iiwa_sensors.meas_jnt_pos[6]);
+}
+
 void iiwa_activity_running(activity_t *activity){
-	iiwa_activity_running_communicate(activity);
+	iiwa_activity_running_communicate_first_round(activity);
 	iiwa_activity_running_coordinate(activity);
 	iiwa_activity_running_configure(activity);
+	iiwa_activity_running_compute(activity);
+	iiwa_activity_running_communicate_second_round(activity);
 }
 
 // SCHEDULER 

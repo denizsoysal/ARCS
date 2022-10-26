@@ -69,6 +69,39 @@ void* set_actuation(void* activity){
 	}
 }
 
+void* set_goal(void* activity){
+	activity_t *iiwa_activity = (activity_t*) activity; 
+	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity->conf.params;
+	iiwa_activity_continuous_state_t *continuous_state =
+	(iiwa_activity_continuous_state_t *) iiwa_activity->state.computational_state.continuous;
+	iiwa_activity_coordination_state_t *coord_state =
+	(iiwa_activity_coordination_state_t *) iiwa_activity->state.coordination_state;  
+
+	// int dt = 10; // ms
+	
+	while(!(*deinitialisation_request)){
+		usleep(1000*dt);  // time in microseconds
+		if (iiwa_activity->lcsm.state == RUNNING){
+            // Copying data
+			pthread_mutex_lock(&coord_state->actuation_lock);
+			params->iiwa_params.cmd_jnt_vel[0] = 0;
+			params->iiwa_params.cmd_jnt_vel[1] = 0;
+			params->iiwa_params.cmd_jnt_vel[2] = 0;
+			params->iiwa_params.cmd_jnt_vel[3] = 0;
+			params->iiwa_params.cmd_jnt_vel[4] = 0;
+			params->iiwa_params.cmd_jnt_vel[5] = 0;
+			pthread_mutex_unlock(&coord_state->actuation_lock);
+
+			// Copying data
+			pthread_mutex_lock(coord_state->goal_lock);
+			params->goal_jnt_pos[6] = -(3.1416*2.0*3.1416*0.3/4.0)*sin(0.3*2.0*3.1416*t);
+			pthread_mutex_unlock(coord_state->goal_lock);
+			t += (double)dt/1000;
+			// printf("%f\n", t);
+		}
+	}
+}
+
 void* save_sensor_data(void* activity){
 	activity_t *iiwa_activity = (activity_t*) activity; 
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity->conf.params;
@@ -101,6 +134,9 @@ int main(int argc, char**argv){
 	ec_iiwa_activity.create_lcsm(&iiwa_activity, "iiwa_activity");   
 	ec_iiwa_activity.resource_configure_lcsm(&iiwa_activity);
 
+	// Allocate memory for the goal position (remove later)
+	double goal_pos[7];
+
 	// Share memory
 	iiwa_activity_coordination_state_t *iiwa_activity_coord_state =
 			(iiwa_activity_coordination_state_t *) iiwa_activity.state.coordination_state;
@@ -108,6 +144,7 @@ int main(int argc, char**argv){
 	deinitialisation_request = &iiwa_activity_coord_state->deinitialisation_request;
 
 	iiwa_activity_params_t* params = (iiwa_activity_params_t *) iiwa_activity.conf.params;
+	params->goal_jnt_pos = goal_pos;
 
 	strcpy(params->iiwa_params.fri_ip,"192.168.1.50");
 	params->iiwa_params.fri_port = 30100;
@@ -132,7 +169,7 @@ int main(int argc, char**argv){
 	pthread_t pthread_iiwa, pthread_actuation, phtread_saving;
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
-	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_activity);
+	pthread_create( &pthread_actuation, NULL, set_goal, (void*) &iiwa_activity);
 	pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
