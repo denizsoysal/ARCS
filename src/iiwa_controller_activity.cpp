@@ -246,9 +246,9 @@ void iiwa_controller_activity_running_communicate(activity_t *activity){
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
 	for (unsigned int i=0;i<7;i++){ //need to change to a variable 7
-		params->local_sensors.meas_torques[i] = params->iiwa_controller_params.iiwa_sensors.meas_torques[i];
-		params->local_sensors.meas_jnt_pos[i] = params->iiwa_controller_params.iiwa_sensors.meas_jnt_pos[i]
-		params->local_sensors.meas_ext_torques[i] = params->iiwa_controller_params.iiwa_sensors.meas_ext_torques[i];
+		params->local_sensors.meas_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_torques[i];
+		params->local_sensors.meas_jnt_pos[i] = params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos[i];
+		params->local_sensors.meas_ext_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_ext_torques[i];
 	}
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
@@ -298,7 +298,7 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 
 	//NEED A MUTEX ?? Don't know
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		continuous_state->iiwa_controller_state.cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
+		continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
 	}
 }
 

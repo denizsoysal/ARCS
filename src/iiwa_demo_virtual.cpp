@@ -106,18 +106,18 @@ int main(int argc, char**argv){
 	ec_iiwa_controller_activity.resource_configure_lcsm(&iiwa_controller);
 
 	// Share memory
-	iiwa_virtual_params_t* virtual_params = (iiwa_virtual_params_t *) activity->conf.params;
-	iiwa_virtual_continuous_state_t *virtual_continuous_state = (iiwa_virtual_continuous_state_t *) activity->state.computational_state.continuous;
-	iiwa_virtual_coordination_state_t *virtual_coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
+	iiwa_virtual_params_t* virtual_params = (iiwa_virtual_params_t *) iiwa_virtual.conf.params;
+	iiwa_virtual_continuous_state_t *virtual_continuous_state = (iiwa_virtual_continuous_state_t *) iiwa_virtual.state.computational_state.continuous;
+	iiwa_virtual_coordination_state_t *virtual_coord_state = (iiwa_virtual_coordination_state_t *) iiwa_virtual.state.coordination_state;
 
-	deinitialisation_request = &iiwa_virtual_coord_state->deinitialisation_request;
+	deinitialisation_request = &virtual_coord_state->deinitialisation_request;
 
 	virtual_params->iiwa_params.cmd_mode = POSITION;
 	virtual_params->thread_time = thread_time; //ms
 
-	iiwa_controller_activity_params_t* iiwa_controller_params = (iiwa_controller_activity_params_t *) activity->conf.params;
-	iiwa_controller_activity_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
-	iiwa_controller_activity_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+	iiwa_controller_activity_params_t* iiwa_controller_params = (iiwa_controller_activity_params_t *) iiwa_controller.conf.params;
+	iiwa_controller_activity_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_activity_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
+	iiwa_controller_activity_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_activity_coordination_state_t *) iiwa_controller.state.coordination_state;
 
 	// Virtual <-> Controller
 	iiwa_controller_coord_state->sensor_lock = &virtual_coord_state->sensor_lock;
@@ -127,7 +127,7 @@ int main(int argc, char**argv){
 	iiwa_controller_continuous_state->iiwa_controller_state = &virtual_params->iiwa_params;
 
 	// Manually 
-	iiwa_virtual_coord_state->execution_request = true;
+	virtual_coord_state->execution_request = true;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;

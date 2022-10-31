@@ -18,6 +18,10 @@
 // ACCAL
 #include <five_c/activity/activity.h>
 
+#include "iiwa_client.hpp"
+#include <friUdpConnection.h>
+#include <friClientApplication.h>
+
 #include "iiwa_interface.hpp"
 
 using namespace std;
@@ -32,7 +36,13 @@ typedef struct iiwa_Controller_activity_s{
 typedef struct iiwa_controller_activity_params_s{
     iiwa_state_t *iiwa_controller_params;
     double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    struct iiwa_sensors_s local_sensors;
+
+    struct iiwa_sensors_s{
+		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+		double 			meas_torques[LBRState::NUMBER_OF_JOINTS];
+		double 			meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
+	}local_sensors;
+
 }iiwa_controller_activity_params_t;
 
 // Continuous state
