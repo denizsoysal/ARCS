@@ -16,7 +16,7 @@
 #include <pthread.h>
 
 // ACCAL
-#include <five_c/activity/activity.h>
+#include <aacal/activity/activity.h>
 
 // Client
 #include "iiwa_interface.hpp"
@@ -32,7 +32,6 @@ typedef struct iiwa_activity_s{
 // Parameters
 typedef struct iiwa_activity_params_s{
     iiwa_params_t               iiwa_params;
-    double			            *goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 }iiwa_activity_params_t;
 
 // Continuous state
@@ -52,7 +51,7 @@ typedef struct iiwa_activity_coordination_state_s {
     bool deinitialisation_request;
     bool commanding_not_active;
     // Mutex
-    pthread_mutex_t sensor_lock, actuation_lock, *goal_lock;
+    pthread_mutex_t sensor_lock, actuation_lock;
 } iiwa_activity_coordination_state_t;
 
 extern const iiwa_activity_t ec_iiwa_activity;
