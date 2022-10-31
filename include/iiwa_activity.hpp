@@ -16,7 +16,7 @@
 #include <pthread.h>
 
 // ACCAL
-#include <aacal/activity/activity.h>
+#include <five_c/activity/activity.h>
 
 // Client
 #include "iiwa_interface.hpp"
