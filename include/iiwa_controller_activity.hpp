@@ -18,7 +18,7 @@
 // ACCAL
 #include <five_c/activity/activity.h>
 
-#include <iiwa_interface.hpp>
+#include "iiwa_interface.hpp"
 
 using namespace std;
 
@@ -31,7 +31,7 @@ typedef struct iiwa_Controller_activity_s{
 // Parameters
 typedef struct iiwa_controller_activity_params_s{
     iiwa_state_t *iiwa_controller_params;
-    double	*goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+    double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
     struct iiwa_sensors_s local_sensors;
 }iiwa_controller_activity_params_t;
 
@@ -51,7 +51,7 @@ typedef struct iiwa_controller_activity_coordination_state_s {
     bool deinitialisation_request;
     bool commanding_not_active;
     // Mutex
-    pthread_mutex_t *sensor_lock, *actuation_lock, *goal_lock; //pointers because they will point to the same as the iiwa_activity
+    pthread_mutex_t *sensor_lock, *actuation_lock, goal_lock; //pointers because they will point to the same as the iiwa_activity
 } iiwa_controller_activity_coordination_state_t;
 
 extern const iiwa_controller_activity_t ec_iiwa_controller_activity;

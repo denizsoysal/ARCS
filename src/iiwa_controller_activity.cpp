@@ -253,11 +253,11 @@ void iiwa_controller_activity_running_communicate(activity_t *activity){
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
 	// Read the goal from OTHER activity 
-	pthread_mutex_lock(coord_state->goal_lock);
+	pthread_mutex_lock(&coord_state->goal_lock);
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		params->local_goal_jnt_pos[i] = *params->goal_jnt_pos[i];
+		params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
 	}
-	pthread_mutex_unlock(coord_state->goal_lock);
+	pthread_mutex_unlock(&coord_state->goal_lock);
 }
 
 void iiwa_controller_activity_running_coordinate(activity_t *activity){

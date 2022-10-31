@@ -38,6 +38,7 @@ set(FIVE_C_INCLUDE_DIR ${FIVE_C_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
     src/iiwa_virtual.cpp
+    src/iiwa_controller_activity.cpp
 )
 add_dependencies(${PROJECT_NAME} five_c kuka_fri_sdk)
 
