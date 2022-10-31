@@ -10,7 +10,7 @@
  * @date September 15, 2022
  **/
 
-#include "string.h"
+#include <string.h>
 #include <time.h>
 
 #include "iiwa_virtual.hpp"
@@ -225,8 +225,7 @@ void iiwa_virtual_capability_configuration_compute(activity_t *activity){
 				activity->state.lcsm_flags.capability_configuration_complete = true;
 			}
 			else{
-				printf("[ERROR] Commanding mode different, deinitializing \n
-				    Virtual only valid for POSITION Mode");
+				printf("[ERROR] Commanding mode different, deinitializing \n Virtual only valid for POSITION Mode");
 				activity->state.lcsm_protocol = DEINITIALISATION;
 			}
 			break;
@@ -335,18 +334,18 @@ void iiwa_virtual_running_compute(activity_t *activity){
     // write the current set points to a text file
     fpt = fopen("meas_jnt_pos.csv", "a+");
 	fprintf(fpt, "%f, %f, %f, %f, %f, %f, %f \n", 
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[0],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[1],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[2],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[3],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[4],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[5],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos_[6]);
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[0],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[1],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[2],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[3],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[4],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[5],
+	            iiwa_state->iiwa_sensors.meas_jnt_pos[6]);
 	fclose(fpt);
 
     // update the meas_jnt_pos on the iiwa using cmd_jnt_vel
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += *params->thread_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
 	}
 	pthread_mutex_unlock(&coord_state->sensor_lock);
 

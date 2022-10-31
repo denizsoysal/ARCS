@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include "iiwa_interface.hpp"
 
 // ACCAL
 #include <five_c/activity/activity.h>
