@@ -242,7 +242,8 @@ void iiwa_virtual_capability_configuration(activity_t *activity){
 }
 
 void iiwa_virtual_pausing_coordinate(activity_t *activity){
-	iiwa_virtual_coordination_state_t * coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
+	printf("entered pausing coordinate\n");
+	iiwa_virtual_coordination_state_t *coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
 	iiwa_virtual_continuous_state_t *continuous_state = (iiwa_virtual_continuous_state_t *) activity->state.computational_state.continuous;
 	// Coordinating with other activities
 	if (coord_state->execution_request)
@@ -252,23 +253,24 @@ void iiwa_virtual_pausing_coordinate(activity_t *activity){
 	// Coordinating own activity
 	switch (activity->state.lcsm_protocol){ 
 		case EXECUTION:
-			if (continuous_state->iiwa_state.client->current_session_state == COMMANDING_ACTIVE){
-				activity->lcsm.state = RUNNING;
-			}
+			activity->lcsm.state = RUNNING;
 			break;
 		case DEINITIALISATION:
 			activity->lcsm.state = CAPABILITY_CONFIGURATION;
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
+	printf("finished pausing coordinate\n");
 }
 
 void iiwa_virtual_pausing_configure(activity_t *activity){
+	printf("started pausing configure\n");
 	if (activity->lcsm.state != PAUSING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
 		remove_schedule_from_eventloop(&activity->schedule_table, "pausing");
 	}
+	printf("finished pausing configure\n");
 }
 
 void iiwa_virtual_pausing(activity_t *activity){
@@ -345,7 +347,7 @@ void iiwa_virtual_running_compute(activity_t *activity){
 
     // update the meas_jnt_pos on the iiwa using cmd_jnt_vel
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += *params->thread_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
 	}
 	pthread_mutex_unlock(&coord_state->sensor_lock);
 

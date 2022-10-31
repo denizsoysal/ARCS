@@ -8,7 +8,7 @@ set(CMAKE_BUILD_TYPE Debug)
 ############
 ## Option ##
 ############
-option(STAND_ALONE "Compile this package outside a higher lever repository" OFF)
+option(STAND_ALONE "Compile this package outside a higher lever repository" ON)
 
 ###########
 ## Build ##

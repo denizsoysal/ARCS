@@ -30,7 +30,7 @@ typedef struct iiwa_virtual_s{
 // Parameters
 typedef struct iiwa_virtual_params_s{
     iiwa_params_t               iiwa_params;
-    int*                        thread_time;
+    int                         thread_time;
 }iiwa_virtual_params_t;
 
 // Continuous state

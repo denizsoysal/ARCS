@@ -50,6 +50,7 @@ void* set_actuation(void* activity){
 	(iiwa_virtual_coordination_state_t *) iiwa_virtual->state.coordination_state;  
 
 	int dt = 100; // ms
+	double t = 0;
 	
 	while(!(*deinitialisation_request)){
 		usleep(1000*dt);  // time in microseconds
@@ -136,9 +137,9 @@ int main(int argc, char**argv){
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);
 	pthread_join(pthread_actuation, NULL);
-	pthread_join(phtread_saving, NULL);
+	// pthread_join(phtread_saving, NULL);
 	
 	// Freeing memory
-	// ec_iiwa_virtual.destroy_lcsm(&iiwa_virtual);
+	ec_iiwa_virtual.destroy_lcsm(&iiwa_virtual);
 	return 0;
 }
