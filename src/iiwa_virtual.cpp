@@ -242,7 +242,6 @@ void iiwa_virtual_capability_configuration(activity_t *activity){
 }
 
 void iiwa_virtual_pausing_coordinate(activity_t *activity){
-	printf("entered pausing coordinate\n");
 	iiwa_virtual_coordination_state_t *coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
 	iiwa_virtual_continuous_state_t *continuous_state = (iiwa_virtual_continuous_state_t *) activity->state.computational_state.continuous;
 	// Coordinating with other activities
@@ -260,17 +259,14 @@ void iiwa_virtual_pausing_coordinate(activity_t *activity){
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
-	printf("finished pausing coordinate\n");
 }
 
 void iiwa_virtual_pausing_configure(activity_t *activity){
-	printf("started pausing configure\n");
 	if (activity->lcsm.state != PAUSING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
 		remove_schedule_from_eventloop(&activity->schedule_table, "pausing");
 	}
-	printf("finished pausing configure\n");
 }
 
 void iiwa_virtual_pausing(activity_t *activity){
