@@ -29,7 +29,7 @@
 
 bool *deinitialisation_request;
 double jnt_pos_save[7];
-FILE *fpt;
+FILE *fpt, *fpt2;
 double traj_time;
 int thread_time = 10; //ms
 
@@ -62,9 +62,19 @@ void* set_actuation(void* activity){
 			params->goal_jnt_pos[3] = 0;
 			params->goal_jnt_pos[4] = 0;
 			params->goal_jnt_pos[5] = 0;
-			params->goal_jnt_pos[6] = -(3.1416*2.0*3.1416*0.3/4.0)*sin(0.3*2.0*3.1416*t);
+			if (t < 1){
+				params->goal_jnt_pos[6] = 0;
+			}else{
+				params->goal_jnt_pos[6] = 1;
+			}
+
+            fpt2 = fopen("setpoint.csv", "a+");
+			fprintf(fpt2, " %f, %f \n", t, params->goal_jnt_pos[6]);
+			fclose(fpt2);
+
 			pthread_mutex_unlock(&coord_state->goal_lock);
 			t += (double)dt/1000;
+
 			// printf("%f\n", t);
 		}
 	}
@@ -135,7 +145,7 @@ int main(int argc, char**argv){
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", thread_time); // 4 ms
-	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", thread_time*2);
+	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", thread_time);
 
 	// Register activities in threads
 	register_activity(&thread_iiwa, &iiwa_virtual, "iiwa_virtual");
