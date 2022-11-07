@@ -92,7 +92,7 @@ TODO
 
 # World Model for the MVP
 
-### Top View 
+## Top View Features
 
 ![top_features](figs/top_features.png "The Top View of the Whiteboard with Features Shown")
 
@@ -102,7 +102,7 @@ TODO
 | left_arm_end_effector  	| point          	| colour (by placing identifiable mark on end effector) or shape (convolving image with kernel representing shape of end-effector) 	|
 | right_arm_end_effector 	| point          	| colour (by placing identifiable mark on end effector) or shape (convolving image with kernel representing shape of end-effector) 	|
 
-### Front View
+## Front View Features
 
 ![front_features](figs/front_features.png "The Front View of the Whiteboard with Features Shown")
 
@@ -113,3 +113,9 @@ TODO
 | left_arm_end_effector - eraser   	| point                      	| Similar to top view                                                                                                                                      	|
 | right_arm_end_effector - grasper 	| point                      	| Similar to top view                                                                                                                                      	|
 
+
+## Raw Images
+
+![top_raw](figs/top_raw.png)
+
+![front_raw](figs/front_raw.png)
