@@ -37,12 +37,15 @@ In the process of concrete surface finishing, where the concrete was deposited b
 
 ## Activity Architecture
 
+![activity_architecture](figs/activity_arch.png "Architecture for the Activities")
+
 ## iiwaSE_activity
 
-### State Transition Diagram
-
+![iiwase_activity](figs/iiwase_activity.png "iiwase activity Finite State Machine (top level activity")
 
 ### Petri Net (TODO update for Select Dirty Patch)
+
+![iiwase_pnet](figs/iiwase_pnet.png "iiwase activity Petri Net")
 
 ### State Description Table (TODO update for Select Dirty Patch -> Miguel):
 
@@ -54,12 +57,24 @@ In the process of concrete surface finishing, where the concrete was deposited b
 | Configure Erase Orientation 	| arm_left_coordinator (wait) AND arm_right_coordinator (wait) 	| configuration_done                                               	| If the mostly_dirty_left flag is set, then set the arm_left_coordinator resource to Erase, and the arm_right_coordinator resource to Grasp. If the mostly_dirty_right flag is set, do the opposite. <br>Once the configuration of each arm is set, then set the configuration_done flag.  	|   	|
 | Erase                       	|                                                              	| Condition to be checked from the arm coordinators? + clean flag? 	| Sets the Arms coordinator activities into RUNNING STATE (to be checked?)                                                                                                                                                                                                                  	|   	|
 
-## arm_[left/right]_coordinator Activity (Todo split into two separate coordinator state machines for erasing and grasping)
+## arm_left/right_coordinator Activity (Todo split into two separate coordinator state machines for erasing and grasping)
 
+![arm_coordinator](figs/arm_coordinator.png "The Arm Coordinator Finite State Machine with 2 Instances")
 
 ### Petri Net
 
+![arm_pnet](figs/arm_coordinator_petri.png "The Petri Net for the Arm Coordinator State Transitions")
+
 ### State Description Table (for Erasing Configuration):
+
+|      State      	|            Sub-Activities Running (state)            	| State Transition Flags 	|                                                                                             Description                                                                                             	|   	|
+|:---------------:	|:----------------------------------------------------:	|:----------------------:	|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:	|---	|
+| Wait            	| arm_navigation                                       	|                        	|                                                                                                                                                                                                     	|   	|
+|                 	| arm_left/right_interface                           	|                        	|                                                                                                                                                                                                     	|   	|
+| Approach        	| arm_navigation arm_left/right_interface perception 	| approach_reached       	| In this state, the end effector is guided to an approach location computed beforehand. The speed of motion can be high (relatively).  Perception is used for feedback on position.                  	|   	|
+| Contact         	| arm_navigation arm_left/right_interface perception 	| contact                	| Same as the previous state but slower. The wrench at the end-effector now comprises a component for the applied force/torque.  The contact is detected from the reaction force at the end effector. 	|   	|
+| Move along      	| arm_navigation arm_left/right_interface perception 	| white_board_clean      	| Follow a trajectory (Raster e.g.) to cover the patch defined around the marking.                                                                                                                    	|   	|
+| Release contact 	| arm_navigation arm_left/right_interface perception 	| contact_released       	| Break contact with the board (“go back to  approach location”)                                                                                                                                      	|   	|
 
 ### State Description Table (for Grasping Configuration)
 
@@ -77,19 +92,24 @@ TODO
 
 # World Model for the MVP
 
-## Raw Images from Top and Front Camera Views
-
-A view from the top camera clearly shows the top edge whiteboard feature. 
-
-A view from the front camera showing the surface of the whiteboard.
-
-A view with writing on the whiteboard to erase
-
-## Perception Feature Images
-
 ### Top View 
+
+![top_features](figs/top_features.png "The Top View of the Whiteboard with Features Shown")
+
+|     Object Feature     	| Representation 	|                                                          Characteristics                                                         	|
+|:----------------------:	|:--------------:	|:--------------------------------------------------------------------------------------------------------------------------------:	|
+| whiteboard_top_edge    	| line of pixels 	| Longer than specified minimum, contrast with region below it (colour boundary)                                                   	|
+| left_arm_end_effector  	| point          	| colour (by placing identifiable mark on end effector) or shape (convolving image with kernel representing shape of end-effector) 	|
+| right_arm_end_effector 	| point          	| colour (by placing identifiable mark on end effector) or shape (convolving image with kernel representing shape of end-effector) 	|
 
 ### Front View
 
+![front_features](figs/front_features.png "The Front View of the Whiteboard with Features Shown")
 
+|          Object Feature          	|       Representation       	|                                                                      Characteristics                                                                     	|
+|:--------------------------------:	|:--------------------------:	|:--------------------------------------------------------------------------------------------------------------------------------------------------------:	|
+| whiteboard_boundaries            	| Quadrilateral              	| Larger than specified minimum, contrast with region below it (colour boundary) Colour                                                                    	|
+| word_boundaries                  	| Quadrilateral or rectangle 	| colour (by using colour histogram and comparing to dominant colour of whiteboard) or shape (convolving image with kernel - SoA to detect words on image) 	|
+| left_arm_end_effector - eraser   	| point                      	| Similar to top view                                                                                                                                      	|
+| right_arm_end_effector - grasper 	| point                      	| Similar to top view                                                                                                                                      	|
 
