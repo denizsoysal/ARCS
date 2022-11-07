@@ -116,6 +116,6 @@ TODO
 
 ## Raw Images
 
-![top_raw](figs/top_raw.png)
+![top_raw](figs/top_raw.jpg)
 
-![front_raw](figs/front_raw.png)
+![front_raw](figs/front_raw.jpg)
