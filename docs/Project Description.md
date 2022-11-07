@@ -1,57 +1,95 @@
-## Goal
-Erasing specific parts of a whiteboard on wheels, specific meaning only parts with writing/drawing on it. In later stages this can be made more 'smart' by for example identifying and only erasing specific letters/words.
+# Problem Description 
 
-## Actions
-1. Start task: Erasing process starts with a given cue, e.g. the whiteboard is rolled into the robots range.
-2. Orientation of whiteboard: Grab the board with both arms and bring it to a position in which the area to be erased is reachable, two arms are necessary to be able to rotate the board more easily and move it sideways in a controllable way.
-3. Erasing: Keep holding the board with one arm, grab the eraser with the other and start erasing. This behaviour is inspired by how a human would erase a whiteboard on wheels to prevent it rolling away.
-4. If other parts of the whiteboard have writing on it which is not reachable after this, grab the board again and move it over to erase the other parts. Repeat untill whiteboard is clean.
-5. (stretch goal: If one side of the whiteboard is clean, rotate the board to clean the other side)
+**Brendan Pousett, Deniz Soysal, Louis Hanut, Miguel Lejeune**
 
-This sequence can be split into two tasks: orientation and erasing, which the robot must alternate between to complete the overarching goal of cleaning the whiteboard. Both tasks are described in more detail below. 
+Team iiwaSE seeks to implement a “whiteboard manipulation and erasing” skill on a bimanual robot arm system. While erasing and moving rolling whiteboards is not necessarily an industrially relevant problem, the skill required is similar to the problem on concrete surface finishing, as required in EU based RobetArme project. 
 
-### 1. Orientation of Whiteboard
+In the process of concrete surface finishing, where the concrete was deposited by the shotcrete process, the worker utilises bimanual manipulation to move a stiff, serrated board across the surface of the concrete, removing excess material.
 
-This aspect of the project deals with moving the whiteboard to a suitable location to be erased. A user should be able to place the whiteboard in a skewed orientation in front of the robot, and have the robot move the board to an easier location to erase the characters. The robot should also be able to move the whiteboard in the case that it cannot reach the entire surface during erasing.
+# Product Description
 
-#### Control Elements
+## MVP Scope
 
-1.  Understand when the task can start (ie, when can the robot start interacting with the whiteboard?)
-2.  Once the desired grasp location is known, how do we move the arms to that location and orient it with respect to the edge?
-3.  How do we initiate a grasp sequence? What grasping hardware do we need? How do we know that a grasp has been successful?
-4.  When we know that we are holding the whiteboard, control of the multi arm system to move the whiteboard to the desired location.
+1. Classify a whiteboard as clean or dirty.
+2. Identify dirty areas of the whiteboard that require cleaning.
+3. Grasp a normally oriented, wheeled whiteboard on the top edge with one arm above the dirty region.
+4. Move a cleaning tool (eraser) along the surface of the whiteboard to clean dirty regions with the other arm.
+5. Check whether the attempted erasing action was successful.
 
-#### Perception Elements
+## Controlled Conditions
 
-1.  Understand when the whiteboard is in the frame?
-2.  Extract the desired grasp locations, or "graspable" features from the whiteboard images.
-3.  Transform those features to a desired location and pose for the gripper.
-4.  Understand when the whiteboard is in the desired final location.
+1. The whiteboard plane will be orthogonal to the symmetry plane of the bimanual system.
+2. The dirty areas of the whiteboard will be in the workspace of the robot.
+3. The entire set of dirty regions on the whiteboard always need to be erased at one time.
+4. The whiteboard will not have any additional objects on the writing surface, such as magnets, tape, etc.
+5. The whiteboard will not be manipulated by external sources during the erasing phase.
+6. Humans will not be present in the workspace during the erasing phase. 
 
-### 2. Erasing of Whiteboard
+## Possible Future Work
 
-#### Control Elements
+1. Allow the board to be skewed, or only partially in the workspace and require the system to manipulate it to a suitable orientation for cleaning (remove conditions 1&2 above).
+2. Add intelligent cleaning functionality, where the user might want the robot to erase certain colours, or correct spelling mistakes (remove condition 3).
+3. Add the ability to distinguish writing from fixed objects on the whiteboard, such as post it notes, magnets, other erasers, tape, etc. (remove condition 4). 
+4. Add ability to continue erasing even if the whiteboard surface is moved by external agents during the erasing phase (remove condition 5). 
+5. Add ability to interact with humans, involving pausing when a human enters the workspace, reorient board if human skewed it, and resume erasing operation when human has left (remove condition 6). 
 
-1.  Grasping the sponge to erase the whiteboard (how to grasp, and how to know we are successful?)
-2.  Applying the correct force to the normal surface of the whiteboard to ensure that the sponge is always in contact, but is still able to move to the left and right.
-3.  Monitors so that at any time a human can regain control of the system. This could be implemented by the human applying a force to the robot, or visually, when the camera detects a human in the frame. Robot should signal that it is ready to hand off control to the human.
-4.  While erasing with one arm, using the other arm to stabilize the whiteboard.
+# Architecture of Activities
 
-#### Perception Elements
+## Activity Architecture
 
-1.  Identifying dirty areas on the whiteboard, and prioritizing the ones to erase first.
-2.  Confirming that a dirty area has been erased.
-3.  Distinguishing characters from each other, if we only want to erase parts of words or spelling mistakes.
-4.  Understand spacing between letters and be able to separate words.
+## iiwaSE_activity
 
-## Other Decisions
+### State Transition Diagram
 
-### Camera: 
-stereo camera mounted on a fixed frame in the middle of the two arms.
-- Advantages: depth information for locating the whitboard and rgb information to identify parts with writing/drawing.
-- Disadvantages: arms can move in the way of the camera and block the view.
 
-### Control mode: 
-Cartesian impedance. The idea is to put the desired position behind the board and have a relatively soft impedance in the direction perpendicular to the whiteboard surface to make sure the eraser stays in contact with it and at the same not push it backwards too much. In the two directions in the plane of the whiteboard the impedance should be higher to be able to overcome the friction and control the position of the eraser on the whiteboard with relatively high accuracy.
-- Advantages: Easy way to stay in contact with the whiteboard 
-- Disadvantages: Some experimenting will have to be done to figure out the magic numbers for the impedance in the different directions.
+### Petri Net (TODO update for Select Dirty Patch)
+
+### State Description Table (TODO update for Select Dirty Patch -> Miguel):
+
+|            State            	|                Coordinator Activities (state)                	|                     Source Flags Set in State                    	|                                                                                                                                        Description                                                                                                                                        	|   	|
+|:---------------------------:	|:------------------------------------------------------------:	|:----------------------------------------------------------------:	|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:	|---	|
+| Wait                        	| perception (todo which state?)                               	| board_in_range                                                   	| If whiteboard (todo insert feature here) is present within the workspace of the arms, then set this flag. <br>todo notes on implementation                                                                                                                                                	|   	|
+|                             	| perception (todo which state?)                               	| board_dirty                                                      	| If (todo whiteboard feature) contains non white marked regions, set this flag.                                                                                                                                                                                                            	|   	|
+| Identify Dirty Patch        	| perception todo which state                                  	| mostly_dirty_left OR mostly_dirty_right                          	| Compute the most prominent dirty region on the whiteboard surface feature and set the flag corresponding to the most dirty region.                                                                                                                                                        	|   	|
+| Configure Erase Orientation 	| arm_left_coordinator (wait) AND arm_right_coordinator (wait) 	| configuration_done                                               	| If the mostly_dirty_left flag is set, then set the arm_left_coordinator resource to Erase, and the arm_right_coordinator resource to Grasp. If the mostly_dirty_right flag is set, do the opposite. <br>Once the configuration of each arm is set, then set the configuration_done flag.  	|   	|
+| Erase                       	|                                                              	| Condition to be checked from the arm coordinators? + clean flag? 	| Sets the Arms coordinator activities into RUNNING STATE (to be checked?)                                                                                                                                                                                                                  	|   	|
+
+## arm_[left/right]_coordinator Activity (Todo split into two separate coordinator state machines for erasing and grasping)
+
+
+### Petri Net
+
+### State Description Table (for Erasing Configuration):
+
+### State Description Table (for Grasping Configuration)
+
+TODO
+
+## Perception state machine 
+
+### State Transition Diagram
+
+TODO
+
+### State Description Table
+
+TODO
+
+# World Model for the MVP
+
+## Raw Images from Top and Front Camera Views
+
+A view from the top camera clearly shows the top edge whiteboard feature. 
+
+A view from the front camera showing the surface of the whiteboard.
+
+A view with writing on the whiteboard to erase
+
+## Perception Feature Images
+
+### Top View 
+
+### Front View
+
+
+
