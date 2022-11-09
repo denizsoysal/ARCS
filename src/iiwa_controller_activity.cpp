@@ -294,7 +294,7 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) activity->conf.params;
 	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
-	double magic_gain = 0.1;
+	double magic_gain = 100;
 
 	//NEED A MUTEX ?? Don't know
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){

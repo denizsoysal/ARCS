@@ -343,7 +343,7 @@ void iiwa_virtual_running_compute(activity_t *activity){
 
     // update the meas_jnt_pos on the iiwa using cmd_jnt_vel
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time/1000.0 * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
 	}
 	pthread_mutex_unlock(&coord_state->sensor_lock);
 
