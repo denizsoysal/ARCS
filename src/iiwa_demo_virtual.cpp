@@ -138,6 +138,7 @@ int main(int argc, char**argv){
 
 	// Manually 
 	virtual_coord_state->execution_request = true;
+	iiwa_controller_coord_state->execution_request = true;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;

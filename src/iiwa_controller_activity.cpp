@@ -27,27 +27,27 @@ void iiwa_controller_activity_config(activity_t *activity){
 	// Deciding which schedule to add
 	switch (activity->lcsm.state){
 		case CREATION:
-			printf("In creation state \n");
+			printf("In creation state Controller \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "creation");
 			break;
 		case RESOURCE_CONFIGURATION:
-			printf("In resource configuration state \n");
+			printf("In resource configuration state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "resource_configuration");
 			break;
 		case CAPABILITY_CONFIGURATION:
-			printf("In capability configuration state \n");
+			printf("In capability configuration state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "capability_configuration");
             break;
 		case PAUSING:
-			printf("In pausing state \n");
+			printf("In pausing state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "pausing");
 			break;
 		case RUNNING:
-			printf("In running state \n");
+			printf("In running state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "running");
 			break;
 		case CLEANING:
-			printf("In cleaning state \n");
+			printf("In cleaning state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "cleaning");
 			break;
 		case DONE:
@@ -149,6 +149,7 @@ void iiwa_controller_activity_resource_configuration_configure(activity_t *activ
 
 void iiwa_controller_activity_resource_configuration_compute(activity_t *activity){
 	// What to put here ?
+	activity->state.lcsm_flags.resource_configuration_complete = true;
 }
 
 void iiwa_controller_activity_resource_configuration(activity_t *activity){
@@ -195,6 +196,7 @@ void iiwa_controller_activity_capability_configuration_compute(activity_t *activ
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
+	activity->state.lcsm_flags.capability_configuration_complete = true; //test
 }
 
 void iiwa_controller_activity_capability_configuration(activity_t *activity){
@@ -203,11 +205,7 @@ void iiwa_controller_activity_capability_configuration(activity_t *activity){
 	iiwa_controller_activity_capability_configuration_configure(activity);
 }
 
-// Pausing
-void iiwa_controller_activity_pausing_compute(activity_t *activity){
-	//Nothing here for now
-}
-
+//PAUSING
 void iiwa_controller_activity_pausing_coordinate(activity_t *activity){
 	iiwa_controller_activity_coordination_state_t * coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
 	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
@@ -217,8 +215,13 @@ void iiwa_controller_activity_pausing_coordinate(activity_t *activity){
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
 	// Coordinating own activity
-	if (activity->state.lcsm_protocol == DEINITIALISATION){ 
-		activity->lcsm.state = CAPABILITY_CONFIGURATION;
+	switch (activity->state.lcsm_protocol){ 
+		case EXECUTION:
+			activity->lcsm.state = RUNNING;
+			break;
+		case DEINITIALISATION:
+			activity->lcsm.state = CAPABILITY_CONFIGURATION;
+			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
@@ -232,7 +235,6 @@ void iiwa_controller_activity_pausing_configure(activity_t *activity){
 }
 
 void iiwa_controller_activity_pausing(activity_t *activity){
-	iiwa_controller_activity_pausing_compute(activity);
 	iiwa_controller_activity_pausing_coordinate(activity);
 	iiwa_controller_activity_pausing_configure(activity);
 }
