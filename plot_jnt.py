@@ -13,7 +13,7 @@ position_func = lambda t_ms: -(3.14*2*3.14*0.3/4)*np.sin(0.3*2*3.14*t_ms/1000)
 
 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
-ax.plot(df["time"], df["j3"], label="j3")
+ax.plot(df["time"], df["j6"], label="j6")
 # ax.plot(df["time"], position_func(df["time"]), label="setpoint")
 ax.plot(df2["t"] * 1000, df2["setpoint"], label="setpoint")
 ax.grid(True)

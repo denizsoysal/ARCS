@@ -146,7 +146,7 @@ int main(int argc, char**argv){
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", thread_time); // 4 ms
-	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", thread_time);
+	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 2*thread_time);
 
 	// Register activities in threads
 	register_activity(&thread_iiwa, &iiwa_virtual, "iiwa_virtual");
@@ -158,7 +158,7 @@ int main(int argc, char**argv){
 	pthread_t pthread_iiwa, pthread_actuation, phtread_saving, pthread_iiwa_controller;
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
-	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_virtual);
+	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_controller);
 	pthread_create(&pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
 	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_virtual);
 

@@ -296,12 +296,14 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) activity->conf.params;
 	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
-	double magic_gain = 100;
+	double magic_gain = 5;
 
 	//NEED A MUTEX ?? Don't know
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
+		//continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = 0.1; test of the speed increment
 	}
+	printf("Error on position: %f \n",(params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6])); //Highlighting that the local joint position is not changing
 }
 
 
