@@ -31,7 +31,7 @@ bool *deinitialisation_request;
 double jnt_pos_save[7];
 FILE *fpt, *fpt2;
 double traj_time;
-int thread_time = 10; //ms
+int thread_time = 100; //ms
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -48,7 +48,7 @@ void* set_actuation(void* activity){
 	iiwa_controller_activity_coordination_state_t *coord_state =
 	(iiwa_controller_activity_coordination_state_t *) iiwa_controller->state.coordination_state;  
 
-	int dt = 100; // ms
+	int dt = 500; // ms
 	double t = 0;
 	
 	while(!(*deinitialisation_request)){
@@ -78,6 +78,7 @@ void* set_actuation(void* activity){
 			// printf("%f\n", t);
 		}
 	}
+	return 0;
 }
 
 // void* save_sensor_data(void* activity){
@@ -158,7 +159,7 @@ int main(int argc, char**argv){
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_virtual);
-	pthread_create(&pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
+	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
 	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_virtual);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state

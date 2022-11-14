@@ -29,27 +29,27 @@ void iiwa_virtual_config(activity_t *activity){
 	// Deciding which schedule to add
 	switch (activity->lcsm.state){
 		case CREATION:
-			printf("In creation state \n");
+			printf("iiwa virtual in creation state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "creation");
 			break;
 		case RESOURCE_CONFIGURATION:
-			printf("In resource configuration state \n");
+			printf("iiwa virtual in resource configuration state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "resource_configuration");
 			break;
 		case CAPABILITY_CONFIGURATION:
-			printf("In capability configuration state \n");
+			printf("iiwa virtual in capability configuration state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "capability_configuration");
             break;
 		case PAUSING:
-			printf("In pausing state \n");
+			printf("iiwa virtual in pausing state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "pausing");
 			break;
 		case RUNNING:
-			printf("In running state \n");
+			printf("iiwa virtual in running state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "running");
 			break;
 		case CLEANING:
-			printf("In cleaning state \n");
+			printf("iiwa virtual in cleaning state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "cleaning");
 			break;
 		case DONE:

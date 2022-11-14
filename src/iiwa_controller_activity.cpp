@@ -27,27 +27,27 @@ void iiwa_controller_activity_config(activity_t *activity){
 	// Deciding which schedule to add
 	switch (activity->lcsm.state){
 		case CREATION:
-			printf("In creation state \n");
+			printf("Controller in creation state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "creation");
 			break;
 		case RESOURCE_CONFIGURATION:
-			printf("In resource configuration state \n");
+			printf("Controller in resource configuration state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "resource_configuration");
 			break;
 		case CAPABILITY_CONFIGURATION:
-			printf("In capability configuration state \n");
+			printf("Controller in capability configuration state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "capability_configuration");
             break;
 		case PAUSING:
-			printf("In pausing state \n");
+			printf("Controller in pausing state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "pausing");
 			break;
 		case RUNNING:
-			printf("In running state \n");
+			printf("Controller in running state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "running");
 			break;
 		case CLEANING:
-			printf("In cleaning state \n");
+			printf("Controller in cleaning state \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "cleaning");
 			break;
 		case DONE:
@@ -192,6 +192,7 @@ void iiwa_controller_activity_capability_configuration_configure(activity_t *act
 }
 
 void iiwa_controller_activity_capability_configuration_compute(activity_t *activity){
+	// TODO bugfix the controller never leaves the capability configuration state
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
@@ -245,7 +246,7 @@ void iiwa_controller_activity_running_communicate(activity_t *activity){
 
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
-	for (unsigned int i=0;i<7;i++){ //need to change to a variable 7
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		params->local_sensors.meas_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_torques[i];
 		params->local_sensors.meas_jnt_pos[i] = params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos[i];
 		params->local_sensors.meas_ext_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_ext_torques[i];
@@ -294,16 +295,18 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) activity->conf.params;
 	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
-	double magic_gain = 100;
+	double magic_gain = 1;
 
 	//NEED A MUTEX ?? Don't know
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
 	}
+    printf("Controller is %f - %f", params->local_goal_jnt_pos[6], params->local_sensors.meas_jnt_pos[6]);
 }
 
 
 void iiwa_controller_activity_running(activity_t *activity){
+	printf("running the controller");
 	iiwa_controller_activity_running_communicate(activity);
 	iiwa_controller_activity_running_compute(activity);
 	iiwa_controller_activity_running_coordinate(activity);
