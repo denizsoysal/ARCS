@@ -40,6 +40,8 @@ add_library(${PROJECT_NAME} SHARED
     src/iiwa_virtual.cpp
     src/iiwa_controller_activity.cpp
 )
+##src/iiwa_activity.cpp
+
 add_dependencies(${PROJECT_NAME} five_c kuka_fri_sdk)
 
 target_include_directories(${PROJECT_NAME}
@@ -55,6 +57,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${FRISDK_LIB}/libFRIClient.so
 )
 
+## replace iiwa_demo_virtual by iiwase_demo
 if(STAND_ALONE)
     add_executable(iiwa_demo_virtual src/iiwa_demo_virtual.cpp)
     target_link_libraries(iiwa_demo_virtual PRIVATE
