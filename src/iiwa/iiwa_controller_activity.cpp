@@ -13,7 +13,7 @@
 #include "string.h"
 #include <time.h>
 
-#include "iiwa_controller_activity.hpp"
+#include "iiwa/iiwa_controller_activity.hpp"
 #include <iostream>
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 

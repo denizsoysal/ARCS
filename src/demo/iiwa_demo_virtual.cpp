@@ -20,8 +20,8 @@
 #include <five_c/thread/thread.h>
 #include <five_c/activity/activity.h>
 
-#include "iiwa_virtual.hpp"
-#include "iiwa_controller_activity.hpp"
+#include "iiwa/iiwa_virtual.hpp"
+#include "iiwa/iiwa_controller_activity.hpp"
 
 #include <pthread.h>
 #include <unistd.h>

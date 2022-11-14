@@ -10,7 +10,7 @@
  * @date September 15, 2022
  **/
 
-#include "iiwa_interface.hpp"
+#include "iiwa/iiwa_interface.hpp"
 #include <friUdpConnection.h>
 #include <friClientApplication.h>
 #include <iostream>

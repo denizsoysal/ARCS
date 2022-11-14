@@ -10,7 +10,7 @@
  * @date September 15, 2022
  **/
 #include <cstdio>
-#include "iiwa_client.hpp"
+#include "iiwa/iiwa_client.hpp"
 
 #include <cstring>
 //******************************************************************************

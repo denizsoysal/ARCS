@@ -37,8 +37,8 @@ FetchContent_GetProperties(five-c
 set(FIVE_C_INCLUDE_DIR ${FIVE_C_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
-    src/iiwa_virtual.cpp
-    src/iiwa_controller_activity.cpp
+    src/iiwa/iiwa_virtual.cpp
+    src/iiwa/iiwa_controller_activity.cpp
 )
 ##src/iiwa_activity.cpp
 
@@ -59,7 +59,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 ## replace iiwa_demo_virtual by iiwase_demo
 if(STAND_ALONE)
-    add_executable(iiwa_demo_virtual src/iiwa_demo_virtual.cpp)
+    add_executable(iiwa_demo_virtual src/demo/iiwa_demo_virtual.cpp)
     target_link_libraries(iiwa_demo_virtual PRIVATE
         ${PROJECT_NAME}
         pthread

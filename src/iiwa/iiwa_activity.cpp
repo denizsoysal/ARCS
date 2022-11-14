@@ -13,7 +13,7 @@
 #include "string.h"
 #include <time.h>
 
-#include "iiwa_activity.hpp"
+#include "iiwa/iiwa_activity.hpp"
 #include <iostream>
 
 FILE *fpt;
