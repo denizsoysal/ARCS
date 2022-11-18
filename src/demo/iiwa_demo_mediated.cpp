@@ -21,7 +21,7 @@
 #include <five_c/activity/activity.h>
 
 #include "iiwa/iiwa_virtual.hpp"
-#include "iiwa/iiwa_controller_activity.hpp"
+#include "iiwa/iiwa_controller.hpp"
 #include "task_mediator/task_mediator.hpp"
 
 #include <pthread.h>
@@ -45,9 +45,9 @@ static void sigint_handler(int sig){
 
 void* set_actuation(void* activity){
 	activity_t *iiwa_controller = (activity_t*) activity; 
-	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) iiwa_controller->conf.params;
-	iiwa_controller_activity_coordination_state_t *coord_state =
-	(iiwa_controller_activity_coordination_state_t *) iiwa_controller->state.coordination_state;  
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) iiwa_controller->conf.params;
+	iiwa_controller_coordination_state_t *coord_state =
+	(iiwa_controller_coordination_state_t *) iiwa_controller->state.coordination_state;  
 
 	int dt = 500; // ms
 	double t = 0;
@@ -152,8 +152,8 @@ int main(int argc, char**argv){
 	ec_iiwa_virtual.create_lcsm(&iiwa_virtual, "iiwa_virtual");   
 	ec_iiwa_virtual.resource_configure_lcsm(&iiwa_virtual);
 
-	ec_iiwa_controller_activity.create_lcsm(&iiwa_controller, "iiwa_controller");
-	ec_iiwa_controller_activity.resource_configure_lcsm(&iiwa_controller);
+	ec_iiwa_controller.create_lcsm(&iiwa_controller, "iiwa_controller");
+	ec_iiwa_controller.resource_configure_lcsm(&iiwa_controller);
 
 	ec_task_mediator.create_lcsm(&mediator_activity, "mediator_activity");
 	ec_task_mediator.resource_configure_lcsm(&mediator_activity);
@@ -168,9 +168,9 @@ int main(int argc, char**argv){
 	virtual_params->iiwa_params.cmd_mode = POSITION;
 	virtual_params->thread_time = thread_time; //ms
 
-	iiwa_controller_activity_params_t* iiwa_controller_params = (iiwa_controller_activity_params_t *) iiwa_controller.conf.params;
-	iiwa_controller_activity_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_activity_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
-	iiwa_controller_activity_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_activity_coordination_state_t *) iiwa_controller.state.coordination_state;
+	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
+	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_coordination_state_t *) iiwa_controller.state.coordination_state;
 
 	task_mediator_coordination_state_t* task_coord_state = (task_mediator_coordination_state_t *) mediator_activity.state.coordination_state;
 
@@ -222,7 +222,7 @@ int main(int argc, char**argv){
 	
 	// Freeing memory
 	ec_iiwa_virtual.destroy_lcsm(&iiwa_virtual);
-	ec_iiwa_controller_activity.destroy_lcsm(&iiwa_controller);
+	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
 	ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;
 }

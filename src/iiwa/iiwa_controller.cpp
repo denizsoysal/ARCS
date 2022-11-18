@@ -1,19 +1,19 @@
 /* ----------------------------------------------------------------------------
  * Project Title,
  * ROB @ KU Leuven, Leuven, Belgium
- * Authors: 
+ * Authors: Louis Hanut and Brendan Pousett
  * See LICENSE for the license information
  * -------------------------------------------------------------------------- */
 
 /**
- * @file iiwa_controller_activity.c
+ * @file iiwa_controller.cpp
  * @date September 15, 2022
  **/
 
 #include "string.h"
 #include <time.h>
 
-#include "iiwa/iiwa_controller_activity.hpp"
+#include "iiwa/iiwa_controller.hpp"
 #include <iostream>
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 
@@ -21,7 +21,7 @@
  * to the LCSM state, resources, task, ..  
  * @param[in] activity data structure for the hokuyo activity
 */
-void iiwa_controller_activity_config(activity_t *activity){
+void iiwa_controller_config(activity_t *activity){
 	// Remove config() from the eventloop schedule in the next iteration
 	remove_schedule_from_eventloop(&activity->schedule_table, "activity_config");
 	// Deciding which schedule to add
@@ -56,8 +56,8 @@ void iiwa_controller_activity_config(activity_t *activity){
 };
 
 // Creation
-void iiwa_controller_activity_creation_coordinate(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_creation_coordinate(activity_t *activity){
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
@@ -68,7 +68,7 @@ void iiwa_controller_activity_creation_coordinate(activity_t *activity){
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
-void iiwa_controller_activity_creation_configure(activity_t *activity){
+void iiwa_controller_creation_configure(activity_t *activity){
 	if (activity->lcsm.state != CREATION){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -77,26 +77,26 @@ void iiwa_controller_activity_creation_configure(activity_t *activity){
 }
 
 // Allocating memory here
-void iiwa_controller_activity_creation_compute(activity_t *activity){
+void iiwa_controller_creation_compute(activity_t *activity){
 	activity->state.lcsm_flags.creation_complete = true;
 }
 
-void iiwa_controller_activity_creation(activity_t *activity){
-	iiwa_controller_activity_creation_compute(activity);
-	iiwa_controller_activity_creation_coordinate(activity);
-	iiwa_controller_activity_creation_configure(activity);
+void iiwa_controller_creation(activity_t *activity){
+	iiwa_controller_creation_compute(activity);
+	iiwa_controller_creation_coordinate(activity);
+	iiwa_controller_creation_configure(activity);
 }
 
 // Cleaning
-void iiwa_controller_activity_cleaning_coordinate(activity_t *activity){
-    iiwa_controller_activity_coordination_state_t * coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_cleaning_coordinate(activity_t *activity){
+    iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
     // Coordinating own activity
     if (activity->state.lcsm_flags.deletion_complete)
         activity->lcsm.state = DONE;
     update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
-void iiwa_controller_activity_cleaning_configure(activity_t *activity){
+void iiwa_controller_cleaning_configure(activity_t *activity){
     if (activity->lcsm.state != CLEANING){
         // Update schedule
         add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -104,19 +104,19 @@ void iiwa_controller_activity_cleaning_configure(activity_t *activity){
     }
 }
 
-void iiwa_controller_activity_cleaning_compute(activity_t *activity){
+void iiwa_controller_cleaning_compute(activity_t *activity){
     activity->state.lcsm_flags.deletion_complete = true;
 }
 
-void iiwa_controller_activity_cleaning(activity_t *activity){
-    iiwa_controller_activity_cleaning_compute(activity);
-    iiwa_controller_activity_cleaning_coordinate(activity);
-    iiwa_controller_activity_cleaning_configure(activity);
+void iiwa_controller_cleaning(activity_t *activity){
+    iiwa_controller_cleaning_compute(activity);
+    iiwa_controller_cleaning_coordinate(activity);
+    iiwa_controller_cleaning_configure(activity);
 }
 
 // Resource configuration
-void iiwa_controller_activity_resource_configuration_coordinate(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_resource_configuration_coordinate(activity_t *activity){
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
@@ -137,7 +137,7 @@ void iiwa_controller_activity_resource_configuration_coordinate(activity_t *acti
 		update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
-void iiwa_controller_activity_resource_configuration_configure(activity_t *activity){
+void iiwa_controller_resource_configuration_configure(activity_t *activity){
 	if (activity->lcsm.state != RESOURCE_CONFIGURATION){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -147,20 +147,20 @@ void iiwa_controller_activity_resource_configuration_configure(activity_t *activ
 	}
 }
 
-void iiwa_controller_activity_resource_configuration_compute(activity_t *activity){
+void iiwa_controller_resource_configuration_compute(activity_t *activity){
 	// What to put here ?
 	activity->state.lcsm_flags.resource_configuration_complete = true;
 }
 
-void iiwa_controller_activity_resource_configuration(activity_t *activity){
-	iiwa_controller_activity_resource_configuration_compute(activity);
-	iiwa_controller_activity_resource_configuration_coordinate(activity);
-	iiwa_controller_activity_resource_configuration_configure(activity);
+void iiwa_controller_resource_configuration(activity_t *activity){
+	iiwa_controller_resource_configuration_compute(activity);
+	iiwa_controller_resource_configuration_coordinate(activity);
+	iiwa_controller_resource_configuration_configure(activity);
 }
 
 // capability configuration
-void iiwa_controller_activity_capability_configuration_coordinate(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t * coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
+	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	// if (coord_state->execution_request)
 	// 	activity->state.lcsm_protocol = EXECUTION;
 	if (coord_state->deinitialisation_request)
@@ -182,7 +182,7 @@ void iiwa_controller_activity_capability_configuration_coordinate(activity_t *ac
 	}
 }
 
-void iiwa_controller_activity_capability_configuration_configure(activity_t *activity){
+void iiwa_controller_capability_configuration_configure(activity_t *activity){
 	if (activity->lcsm.state != CAPABILITY_CONFIGURATION){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -192,7 +192,7 @@ void iiwa_controller_activity_capability_configuration_configure(activity_t *act
 	}
 }
 
-void iiwa_controller_activity_capability_configuration_compute(activity_t *activity){
+void iiwa_controller_capability_configuration_compute(activity_t *activity){
 	// TODO bugfix the controller never leaves the capability configuration state
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
@@ -200,16 +200,16 @@ void iiwa_controller_activity_capability_configuration_compute(activity_t *activ
 	activity->state.lcsm_flags.capability_configuration_complete = true; //test
 }
 
-void iiwa_controller_activity_capability_configuration(activity_t *activity){
-	iiwa_controller_activity_capability_configuration_compute(activity);
-	iiwa_controller_activity_capability_configuration_coordinate(activity);
-	iiwa_controller_activity_capability_configuration_configure(activity);
+void iiwa_controller_capability_configuration(activity_t *activity){
+	iiwa_controller_capability_configuration_compute(activity);
+	iiwa_controller_capability_configuration_coordinate(activity);
+	iiwa_controller_capability_configuration_configure(activity);
 }
 
 //PAUSING
-void iiwa_controller_activity_pausing_coordinate(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t * coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
-	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
+void iiwa_controller_pausing_coordinate(activity_t *activity){
+	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	// Coordinating with other activities
 	if (coord_state->execution_request)
 		activity->state.lcsm_protocol = EXECUTION;
@@ -227,7 +227,7 @@ void iiwa_controller_activity_pausing_coordinate(activity_t *activity){
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
-void iiwa_controller_activity_pausing_configure(activity_t *activity){
+void iiwa_controller_pausing_configure(activity_t *activity){
 	if (activity->lcsm.state != PAUSING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -235,16 +235,16 @@ void iiwa_controller_activity_pausing_configure(activity_t *activity){
 	}
 }
 
-void iiwa_controller_activity_pausing(activity_t *activity){
-	iiwa_controller_activity_pausing_coordinate(activity);
-	iiwa_controller_activity_pausing_configure(activity);
+void iiwa_controller_pausing(activity_t *activity){
+	iiwa_controller_pausing_coordinate(activity);
+	iiwa_controller_pausing_configure(activity);
 }
 
 // Running
-void iiwa_controller_activity_running_communicate(activity_t *activity){
-	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) activity->conf.params;
-	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_running_communicate(activity_t *activity){
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
+	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
@@ -263,8 +263,8 @@ void iiwa_controller_activity_running_communicate(activity_t *activity){
 	pthread_mutex_unlock(&coord_state->goal_lock);
 }
 
-void iiwa_controller_activity_running_coordinate(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_running_coordinate(activity_t *activity){
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
@@ -281,8 +281,8 @@ void iiwa_controller_activity_running_coordinate(activity_t *activity){
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
-void iiwa_controller_activity_running_configure(activity_t *activity){
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_running_configure(activity_t *activity){
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	if (activity->lcsm.state != RUNNING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -293,10 +293,10 @@ void iiwa_controller_activity_running_configure(activity_t *activity){
 }
 
 
-void iiwa_controller_activity_running_compute(activity_t *activity){
-	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) activity->conf.params;
-	iiwa_controller_activity_continuous_state_t *continuous_state = (iiwa_controller_activity_continuous_state_t *) activity->state.computational_state.continuous;
-	iiwa_controller_activity_coordination_state_t *coord_state = (iiwa_controller_activity_coordination_state_t *) activity->state.coordination_state;
+void iiwa_controller_running_compute(activity_t *activity){
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
+	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	double magic_gain = 5;
 
 	//NEED A MUTEX ?? Don't know
@@ -306,76 +306,76 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 	//printf("Error on position: %f \n",(params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6]));
 }
 
-void iiwa_controller_activity_running(activity_t *activity){
-	iiwa_controller_activity_running_communicate(activity);
-	iiwa_controller_activity_running_compute(activity);
-	iiwa_controller_activity_running_coordinate(activity);
-	iiwa_controller_activity_running_configure(activity);
+void iiwa_controller_running(activity_t *activity){
+	iiwa_controller_running_communicate(activity);
+	iiwa_controller_running_compute(activity);
+	iiwa_controller_running_coordinate(activity);
+	iiwa_controller_running_configure(activity);
 }
 
 // SCHEDULER 
-void iiwa_controller_activity_register_schedules(activity_t *activity){
+void iiwa_controller_register_schedules(activity_t *activity){
     schedule_t schedule_config = {.number_of_functions = 0};
-    register_function(&schedule_config, (function_ptr_t) iiwa_controller_activity_config, 
+    register_function(&schedule_config, (function_ptr_t) iiwa_controller_config, 
         activity, "activity_config");
     register_schedule(&activity->schedule_table, schedule_config, "activity_config");
     
     schedule_t schedule_creation = {.number_of_functions = 0};
-    register_function(&schedule_creation, (function_ptr_t) iiwa_controller_activity_creation, 
+    register_function(&schedule_creation, (function_ptr_t) iiwa_controller_creation, 
         activity, "creation");
     register_schedule(&activity->schedule_table, schedule_creation, "creation");
 
     schedule_t schedule_resource_config = {.number_of_functions = 0};
-    register_function(&schedule_resource_config, (function_ptr_t) iiwa_controller_activity_resource_configuration, 
+    register_function(&schedule_resource_config, (function_ptr_t) iiwa_controller_resource_configuration, 
         activity, "resource_configuration");
     register_schedule(&activity->schedule_table, schedule_resource_config, "resource_configuration");
 
 	schedule_t schedule_capability_config = {.number_of_functions = 0};
-    register_function(&schedule_capability_config, (function_ptr_t) iiwa_controller_activity_capability_configuration, 
+    register_function(&schedule_capability_config, (function_ptr_t) iiwa_controller_capability_configuration, 
         activity, "capability_configuration");
     register_schedule(&activity->schedule_table, schedule_capability_config, "capability_configuration");
     
     schedule_t schedule_pausing = {.number_of_functions = 0};
-    register_function(&schedule_pausing, (function_ptr_t) iiwa_controller_activity_pausing, 
+    register_function(&schedule_pausing, (function_ptr_t) iiwa_controller_pausing, 
         activity, "pausing");
     register_schedule(&activity->schedule_table, schedule_pausing, "pausing");
 
     schedule_t schedule_running = {.number_of_functions = 0};
-    register_function(&schedule_running, (function_ptr_t) iiwa_controller_activity_running, 
+    register_function(&schedule_running, (function_ptr_t) iiwa_controller_running, 
         activity, "running");
     register_schedule(&activity->schedule_table, schedule_running, "running");
 
 	schedule_t schedule_cleaning = {.number_of_functions = 0};
-    register_function(&schedule_cleaning, (function_ptr_t) iiwa_controller_activity_cleaning, 
+    register_function(&schedule_cleaning, (function_ptr_t) iiwa_controller_cleaning, 
         activity, "cleaning");
     register_schedule(&activity->schedule_table, schedule_cleaning, 
         "cleaning");
 }
 
-void iiwa_controller_activity_create_lcsm(activity_t* activity, const char* name_activity){
-    activity->conf.params = malloc(sizeof(iiwa_controller_activity_params_t));
-    activity->state.computational_state.continuous = malloc(sizeof(iiwa_controller_activity_continuous_state_t));
-    activity->state.computational_state.discrete = malloc(sizeof(iiwa_controller_activity_discrete_state_t));
-    activity->state.coordination_state = malloc(sizeof(iiwa_controller_activity_coordination_state_t));
+void iiwa_controller_create_lcsm(activity_t* activity, const char* name_activity){
+    activity->conf.params = malloc(sizeof(iiwa_controller_params_t));
+    activity->state.computational_state.continuous = malloc(sizeof(iiwa_controller_continuous_state_t));
+    activity->state.computational_state.discrete = malloc(sizeof(iiwa_controller_discrete_state_t));
+    activity->state.coordination_state = malloc(sizeof(iiwa_controller_coordination_state_t));
 }
 
-void iiwa_controller_activity_resource_configure_lcsm(activity_t *activity){
+void iiwa_controller_resource_configure_lcsm(activity_t *activity){
     resource_configure_lcsm_activity(activity);
     // Select the inital state of LCSM for this activity
     activity->lcsm.state = CREATION;
     activity->state.lcsm_protocol = INITIALISATION;
 
     // Schedule table (adding config() for the first eventloop iteration)
-    iiwa_controller_activity_register_schedules(activity);
+    iiwa_controller_register_schedules(activity);
     add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
 }
 
-void iiwa_controller_activity_destroy_lcsm(activity_t* activity){
+void iiwa_controller_destroy_lcsm(activity_t* activity){
     destroy_activity(activity);
 }
 
-const iiwa_controller_activity_t ec_iiwa_controller_activity ={
-    .create_lcsm = iiwa_controller_activity_create_lcsm,
-    .resource_configure_lcsm = iiwa_controller_activity_resource_configure_lcsm,
-    .destroy_lcsm = iiwa_controller_activity_destroy_lcsm,
+const iiwa_controller_t ec_iiwa_controller ={
+    .create_lcsm = iiwa_controller_create_lcsm,
+    .resource_configure_lcsm = iiwa_controller_resource_configure_lcsm,
+    .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };

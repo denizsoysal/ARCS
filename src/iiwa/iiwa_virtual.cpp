@@ -1,12 +1,12 @@
 /* ----------------------------------------------------------------------------
  * Project Title,
  * ROB @ KU Leuven, Leuven, Belgium
- * Authors: 
+ * Authors: Louis Hanut and Brendan Pousett
  * See LICENSE for the license information
  * -------------------------------------------------------------------------- */
 
 /**
- * @file iiwa_virtual.c
+ * @file iiwa_virtual.cpp
  * @date September 15, 2022
  **/
 

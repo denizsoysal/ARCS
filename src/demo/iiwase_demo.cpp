@@ -22,7 +22,7 @@
 
 #include <iiwa_activity.hpp>
 
-#include "iiwa/iiwa_controller_activity.hpp"
+#include "iiwa/iiwa_controller.hpp"
 
 #include <pthread.h>
 #include <unistd.h>
@@ -45,9 +45,9 @@ static void sigint_handler(int sig){
 
 void* set_actuation(void* activity){
 	activity_t *iiwa_controller = (activity_t*) activity; 
-	iiwa_controller_activity_params_t* params = (iiwa_controller_activity_params_t *) iiwa_controller->conf.params;
-	iiwa_controller_activity_coordination_state_t *coord_state =
-	(iiwa_controller_activity_coordination_state_t *) iiwa_controller->state.coordination_state;  
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) iiwa_controller->conf.params;
+	iiwa_controller_coordination_state_t *coord_state =
+	(iiwa_controller_coordination_state_t *) iiwa_controller->state.coordination_state;  
 
 	int dt = 100; // ms
 	double t = 0;
@@ -118,8 +118,8 @@ int main(int argc, char**argv){
 	ec_iiwa_activity.create_lcsm(&iiwa_activity, "iiwa_activity");   
 	ec_iiwa_activity.resource_configure_lcsm(&iiwa_activity);
 
-	ec_iiwa_controller_activity.create_lcsm(&iiwa_controller, "iiwa_controller");
-	ec_iiwa_controller_activity.resource_configure_lcsm(&iiwa_controller);
+	ec_iiwa_controller.create_lcsm(&iiwa_controller, "iiwa_controller");
+	ec_iiwa_controller.resource_configure_lcsm(&iiwa_controller);
 
 	// Share memory
 	iiwa_activity_params_t* iiwa_activity_params = (iiwa_activity_params_t *) iiwa_activity.conf.params;
@@ -132,9 +132,9 @@ int main(int argc, char**argv){
 	iiwa_activity_params->iiwa_params.fri_port = 30100;
 	iiwa_activity_params->iiwa_params.cmd_mode = POSITION;
 	
-	iiwa_controller_activity_params_t* iiwa_controller_params = (iiwa_controller_activity_params_t *) iiwa_controller.conf.params;
-	iiwa_controller_activity_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_activity_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
-	iiwa_controller_activity_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_activity_coordination_state_t *) iiwa_controller.state.coordination_state;
+	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
+	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_coordination_state_t *) iiwa_controller.state.coordination_state;
 
 	// Iiwa activity <-> Controller
 	iiwa_controller_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
@@ -177,6 +177,6 @@ int main(int argc, char**argv){
 	
 	// Freeing memory
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
-	ec_iiwa_controller_activity.destroy_lcsm(&iiwa_controller);
+	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
 	return 0;
 }
