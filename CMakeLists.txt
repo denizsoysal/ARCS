@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(iiwa-aacal VERSION 0.0.1 LANGUAGES C CXX)
 
-message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) 
+message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) ##This is to print the status during the cmake
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -36,13 +36,29 @@ FetchContent_GetProperties(five-c
 )
 set(FIVE_C_INCLUDE_DIR ${FIVE_C_SOURCE_DIR}/include)
 
+FetchContent_Declare(coordination-libraries
+    GIT_REPOSITORY git@gitlab.kuleuven.be:u0144428/coordination_libraries.git
+    GIT_TAG repo/organization
+    TIMEOUT 5
+    INSTALL_COMMAND ""
+)
+FetchContent_MakeAvailable(coordination-libraries)
+
+FetchContent_GetProperties(coordination-libraries
+    SOURCE_DIR COORDINATON_LIBRARIES_SOURCE_DIR
+    BINARY_DIR COORDINATON_LIBRARIES_BUILD_DIR
+)
+set(COORDINATON_LIBRARIES_INCLUDE_DIR ${COORDINATON_LIBRARIES_SOURCE_DIR}/include)
+
 add_library(${PROJECT_NAME} SHARED
     src/iiwa/iiwa_virtual.cpp
     src/iiwa/iiwa_controller_activity.cpp
+    src/task_mediator/task_mediator.cpp
+    src/task_mediator/task_mediator_petrinet.cpp
 )
 ##src/iiwa_activity.cpp
 
-add_dependencies(${PROJECT_NAME} five_c kuka_fri_sdk)
+add_dependencies(${PROJECT_NAME} five_c coordination_libraries kuka_fri_sdk)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
@@ -50,17 +66,24 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${FIVE_C_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${FRISDK_INCLUDE}>
+        $<BUILD_INTERFACE:${COORDINATON_LIBRARIES_INCLUDE_DIR}>
+)
+
+target_link_directories(${PROJECT_NAME}
+    PUBLIC
+        ${COORDINATON_LIBRARIES_BUILD_DIR}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     five_c
+    coordination_libraries
     ${FRISDK_LIB}/libFRIClient.so
 )
 
 ## replace iiwa_demo_virtual by iiwase_demo
 if(STAND_ALONE)
-    add_executable(iiwa_demo_virtual src/demo/iiwa_demo_virtual.cpp)
-    target_link_libraries(iiwa_demo_virtual PRIVATE
+    add_executable(iiwa_demo_mediated src/demo/iiwa_demo_mediated.cpp)
+    target_link_libraries(iiwa_demo_mediated PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c

@@ -13,14 +13,14 @@
 #include "task_mediator/task_mediator_petrinet.hpp"
 
 // Tracking sources
-const char* bringup_tracking_source_names[] = {
+char* bringup_tracking_source_names[] = {//const
     "board_in_range",
     "board_dirty"
 };
 bool* bringup_tracking_source_flags[NUMBER_OF_TRACKING_SOURCES];
 
 // Converting sinks
-const char* bringup_converting_sink_names[] = {
+char* bringup_converting_sink_names[] = {//const
     "identify_dirty_patch_ready"
 };
 bool* bringup_converting_sink_flags[NUMBER_OF_CONVERTING_SINKS];
@@ -48,7 +48,7 @@ flag_token_conversion_map_t task_mediator_bringup_petrinet_flag_map = {
         }
 };
 
-petrinet_t task_mediator_create_bringup_petrinet(const char *name) {
+petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
     petrinet_t *p = init_petrinet(name);
 
     place_t *p_board_in_range= create_place(p, bringup_tracking_source_names[BOARD_IN_RANGE]);
@@ -65,9 +65,9 @@ petrinet_t task_mediator_create_bringup_petrinet(const char *name) {
     transition_t *t1 = create_transition(p, "t1");
     add_behaviour(t1, &b1);
 
-    agedge(p, p_kelo_ready, t1, "1", TRUE);
-    agedge(p, p_hokuyo_ready, t1, "1", TRUE);
-    agedge(p, t1, p_platform_operational, "1", TRUE);
+    agedge(p, p_board_in_range, t1, "1", TRUE);
+    agedge(p, p_board_dirty, t1, "1", TRUE);
+    agedge(p, t1, p_identify_dirty_patch_ready, "1", TRUE);
  
     return *p;
 }

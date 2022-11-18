@@ -17,7 +17,7 @@
 #include <stdlib.h>
 
 #include <five_c/activity/activity.h>
-//#include <coordination-libraries/fsm/FSM.h> //if we use this, we need to add it in the CMake
+#include <coordination_libraries/fsm/FSM.h> //if we use this, we need to add it in the CMake
 #include <five_c/scheduler/eventloop_composition_and_execution/petrinet_scheduler.h>
 
 
@@ -41,8 +41,14 @@ typedef struct task_mediator_discrete_state_s{
 
 typedef struct task_mediator_coordination_state_s {
     // From external activities   
+    bool *board_in_range;
+    bool *board_dirty;
+
+    bool *mostly_dirty_right;
+    bool *mostly_dirty_left;
 
     // To external activities
+    bool identify_dirty_patch_ready;
 
     // Internal
 

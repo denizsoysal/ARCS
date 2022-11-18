@@ -303,11 +303,10 @@ void iiwa_controller_activity_running_compute(activity_t *activity){
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
 	}
-	printf("Error on position: %f \n",(params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6]));
+	//printf("Error on position: %f \n",(params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6]));
 }
 
 void iiwa_controller_activity_running(activity_t *activity){
-	printf("running the controller");
 	iiwa_controller_activity_running_communicate(activity);
 	iiwa_controller_activity_running_compute(activity);
 	iiwa_controller_activity_running_coordinate(activity);
