@@ -72,8 +72,6 @@ add_library(${PROJECT_NAME} SHARED
     src/task_mediator/task_mediator.cpp
     src/task_mediator/task_mediator_petrinet.cpp
 )
-# src/iiwa_activity.cpp
-# src/iiwa/iiwa_virtual.cpp
 
 add_dependencies(${PROJECT_NAME} five_c coordination_libraries iiwa_aacal)
 
@@ -98,7 +96,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     iiwa_aacal
 )
 
-## replace iiwa_demo_mediated by iiwase_demo
 if(STAND_ALONE)
     add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
     target_link_libraries(iiwase_demo PRIVATE
