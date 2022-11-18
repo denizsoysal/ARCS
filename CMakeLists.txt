@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10.0)
-project(iiwa-aacal VERSION 0.0.1 LANGUAGES C CXX)
+project(iiwase VERSION 0.0.1 LANGUAGES C CXX)
 
 message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) ##This is to print the status during the cmake
 
@@ -9,19 +9,20 @@ set(CMAKE_BUILD_TYPE Debug)
 ## Option ##
 ############
 option(STAND_ALONE "Compile this package outside a higher lever repository" ON)
+option(BUILD_OFFLINE "Build offline" ON)
+
+if (${BUILD_OFFLINE})
+    set_property(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}
+                PROPERTY EP_UPDATE_DISCONNECTED 1)
+endif()
+
 
 ###########
 ## Build ##
 ###########
-## KUKA SDK specific
-set(KUKA_FRI_SDK ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/)
-set(FRISDK_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/include)
-set(FRISDK_LIB ${CMAKE_CURRENT_SOURCE_DIR}/external/kuka_fri_sdk/lib)
-add_custom_target(kuka_fri_sdk COMMAND make clean && make
-                   WORKING_DIRECTORY ${KUKA_FRI_SDK}/build/GNUMake
-)
 
 # ROB-KUL libraries
+# FIVE C
 include(FetchContent)
 FetchContent_Declare(five-c
     GIT_REPOSITORY git@gitlab.kuleuven.be:u0144428/algorithm_and_activity_component_architecture.git
@@ -36,6 +37,7 @@ FetchContent_GetProperties(five-c
 )
 set(FIVE_C_INCLUDE_DIR ${FIVE_C_SOURCE_DIR}/include)
 
+# Coordination libraries
 FetchContent_Declare(coordination-libraries
     GIT_REPOSITORY git@gitlab.kuleuven.be:u0144428/coordination_libraries.git
     GIT_TAG repo/organization
@@ -50,44 +52,61 @@ FetchContent_GetProperties(coordination-libraries
 )
 set(COORDINATON_LIBRARIES_INCLUDE_DIR ${COORDINATON_LIBRARIES_SOURCE_DIR}/include)
 
+# Including iiwa iiwa_activity
+FetchContent_Declare(iiwa-aacal
+    GIT_REPOSITORY git@gitlab.kuleuven.be:u0141400/iiwa_aacal.git
+    GIT_TAG repo/organization
+    TIMEOUT 5
+    INSTALL_COMMAND ""
+)
+FetchContent_MakeAvailable(iiwa-aacal)
+
+FetchContent_GetProperties(iiwa-aacal
+    SOURCE_DIR IIWA_AACAL_SOURCE_DIR
+    BINARY_DIR IIWA_AACAL_BUILD_DIR
+)
+set(IIWA_AACAL_INCLUDE_DIR ${IIWA_AACAL_SOURCE_DIR}/include)
+
 add_library(${PROJECT_NAME} SHARED
-    src/iiwa/iiwa_virtual.cpp
     src/iiwa/iiwa_controller_activity.cpp
     src/task_mediator/task_mediator.cpp
     src/task_mediator/task_mediator_petrinet.cpp
 )
-##src/iiwa_activity.cpp
+# src/iiwa_activity.cpp
+# src/iiwa/iiwa_virtual.cpp
 
-add_dependencies(${PROJECT_NAME} five_c coordination_libraries kuka_fri_sdk)
+add_dependencies(${PROJECT_NAME} five_c coordination_libraries iiwa_aacal)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${FIVE_C_INCLUDE_DIR}>
-        $<BUILD_INTERFACE:${FRISDK_INCLUDE}>
         $<BUILD_INTERFACE:${COORDINATON_LIBRARIES_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${IIWA_AACAL_INCLUDE_DIR}>
 )
 
 target_link_directories(${PROJECT_NAME}
     PUBLIC
         ${COORDINATON_LIBRARIES_BUILD_DIR}
+        ${IIWA_AACAL_BUILD_DIR}
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     five_c
     coordination_libraries
-    ${FRISDK_LIB}/libFRIClient.so
+    iiwa_aacal
 )
 
-## replace iiwa_demo_virtual by iiwase_demo
+## replace iiwa_demo_mediated by iiwase_demo
 if(STAND_ALONE)
-    add_executable(iiwa_demo_mediated src/demo/iiwa_demo_mediated.cpp)
-    target_link_libraries(iiwa_demo_mediated PRIVATE
+    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
+    target_link_libraries(iiwase_demo PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c
-        ${FRISDK_LIB}/libFRIClient.so
+        coordination_libraries
+        iiwa_aacal
         )    
 endif()
 
