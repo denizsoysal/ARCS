@@ -13,14 +13,11 @@
 #include "task_mediator/task_mediator.hpp"
 #include "task_mediator/task_mediator_petrinet.hpp"
 
-
-/*
-Still needs to be modified
-!!!
-*/
-
-#define FSM_STATE_1 0
-#define FSM_STATE_2 1
+#define FSM_STATE_WAIT 0
+#define FSM_STATE_APPROACH 1
+#define FSM_STATE_VEL_TRANSITION 2
+#define FSM_STATE_CONTACT 3
+#define FSM_STATE_FINAL 4
 
 void task_mediator_config(activity_t* activity){
     // Remove config() from the eventloop schedule in the next iteration
@@ -106,7 +103,11 @@ void task_mediator_resource_configuration_compute(activity_t *activity){
     // Linking the flag array of the petrinet to coordination flags written by coordinated activities
     activity->state.petrinet_flag_map[0].tracking_sources.flags[BOARD_IN_RANGE] = coord_state->board_in_range;
     activity->state.petrinet_flag_map[0].tracking_sources.flags[BOARD_DIRTY] = coord_state->board_dirty;
-    activity->state.petrinet_flag_map[0].converting_sinks.flags[IDENTIFY_DIRTY_PATCH_READY] = &coord_state->identify_dirty_patch_ready;
+    activity->state.petrinet_flag_map[0].tracking_sources.flags[START_VEL_TRANSITION] = coord_state->start_vel_transition;
+    
+    activity->state.petrinet_flag_map[0].tracking_sinks.flags[IDENTIFY_DIRTY_PATCH_READY] = &coord_state->identify_dirty_patch_ready;
+    activity->state.petrinet_flag_map[0].tracking_sinks.flags[START_APPROACH] = &coord_state->start_approach;
+    activity->state.petrinet_flag_map[0].tracking_sinks.flags[ENTER_BLEND_MODEL] = &coord_state->enter_blend_model;
 
     activity->state.lcsm_flags.resource_configuration_complete  = true;
 }
@@ -122,18 +123,26 @@ void task_mediator_running_coordinate(activity_t *activity){
     task_mediator_coordination_state_t *coord_state = (task_mediator_coordination_state_t *) activity->state.coordination_state;
     // Internal coordination
     // Based on the FSM
-    printf("Value of board in range : %d \n", *coord_state->board_in_range);
-    printf("Value of board dirty : %d \n\n", *coord_state->board_dirty);
     switch (activity->fsm[0].state){
-        case (FSM_STATE_1):
+        case (FSM_STATE_WAIT):
+            printf("Value of board in range : %d \n", *coord_state->board_in_range);
+            printf("Value of board dirty : %d \n\n", *coord_state->board_dirty);
             // Evaluating a flag associated to a token of a petrinet
             communicate_token_flags_flag_map(&activity->petrinet[0], 
                 &activity->state.petrinet_flag_map[0]);
             if (coord_state->identify_dirty_patch_ready)
-                activity->fsm[0].state = FSM_STATE_2;
+                activity->fsm[0].state = FSM_STATE_APPROACH;
             break;
-        case (FSM_STATE_2):
-            printf("TASK FSM FINAL STATE \n");
+        case (FSM_STATE_APPROACH):
+            printf("TASK FSM APPROACH \n");
+            printf("Value of start vel trans : %d \n", *coord_state->start_vel_transition);
+            communicate_token_flags_flag_map(&activity->petrinet[0], 
+                &activity->state.petrinet_flag_map[0]);
+            if (coord_state->enter_blend_model)
+                activity->fsm[0].state = FSM_STATE_FINAL;
+            break;
+        case (FSM_STATE_FINAL):
+            printf("TASK FSM FINAL \n");
             activity->state.lcsm_flags.running_complete = true;
             break;
     }

@@ -44,13 +44,14 @@ typedef struct task_mediator_coordination_state_s {
     bool *board_in_range;
     bool *board_dirty;
 
-    bool *mostly_dirty_right;
-    bool *mostly_dirty_left;
+    bool *start_vel_transition;
 
     // To external activities
-    bool identify_dirty_patch_ready;
+    bool start_approach;
 
     // Internal
+    bool identify_dirty_patch_ready;
+    bool enter_blend_model;
 
 } task_mediator_coordination_state_t;
 

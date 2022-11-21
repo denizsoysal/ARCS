@@ -40,8 +40,8 @@ static void sigint_handler(int sig){
 		printf("Ops.. deinitalisation request is a NULL pointer.\n");
 	}else{
 		printf("\nDeinitialising iiwa activity\n");
-		*deinitialisation_request = true;
 		*deinit_controller = true;
+		*deinitialisation_request = true;
 	}
 }
 
@@ -99,9 +99,11 @@ void* set_petrinet(void* activity){
 
 	bool board_in_range = false; //need to allocate memory for those
 	bool board_dirty = false;
+	bool start_vel_transition = false;
 
 	coord_state->board_in_range = &board_in_range;
 	coord_state->board_dirty = &board_dirty;
+	coord_state->start_vel_transition = &start_vel_transition;
 	
 	while(!(*deinitialisation_request)){
 		usleep(1000*dt);  // time in microseconds
@@ -114,6 +116,9 @@ void* set_petrinet(void* activity){
 				}
 			}else{
 				*coord_state->board_dirty = true;
+				if (t>8){
+					*coord_state->start_vel_transition = true;
+				}
 			}
 		}
 		t += (double)dt/1000;
