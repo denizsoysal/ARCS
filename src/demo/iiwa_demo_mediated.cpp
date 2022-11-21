@@ -29,6 +29,7 @@
 
 
 bool *deinitialisation_request;
+bool *deinit_controller;
 double jnt_pos_save[7];
 FILE *fpt, *fpt2;
 double traj_time;
@@ -40,6 +41,7 @@ static void sigint_handler(int sig){
 	}else{
 		printf("\nDeinitialising iiwa activity\n");
 		*deinitialisation_request = true;
+		*deinit_controller = true;
 	}
 }
 
@@ -171,6 +173,8 @@ int main(int argc, char**argv){
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
 	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_coordination_state_t *) iiwa_controller.state.coordination_state;
+
+	deinit_controller= &iiwa_controller_coord_state->deinitialisation_request;
 
 	task_mediator_coordination_state_t* task_coord_state = (task_mediator_coordination_state_t *) mediator_activity.state.coordination_state;
 

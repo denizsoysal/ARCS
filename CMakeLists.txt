@@ -9,7 +9,7 @@ set(CMAKE_BUILD_TYPE Debug)
 ## Option ##
 ############
 option(STAND_ALONE "Compile this package outside a higher lever repository" ON)
-option(BUILD_OFFLINE "Build offline" ON)
+option(BUILD_OFFLINE "Build offline" OFF)
 
 if (${BUILD_OFFLINE})
     set_property(DIRECTORY ${${PROJECT_NAME}_SOURCE_DIR}
@@ -69,6 +69,7 @@ set(IIWA_AACAL_INCLUDE_DIR ${IIWA_AACAL_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
     src/iiwa/iiwa_controller.cpp
+    src/iiwa/iiwa_virtual.cpp
     src/task_mediator/task_mediator.cpp
     src/task_mediator/task_mediator_petrinet.cpp
 )
@@ -97,8 +98,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(STAND_ALONE)
-    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
-    target_link_libraries(iiwase_demo PRIVATE
+    add_executable(iiwa_demo_mediated src/demo/iiwa_demo_mediated.cpp)
+    target_link_libraries(iiwa_demo_mediated PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c
