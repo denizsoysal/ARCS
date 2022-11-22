@@ -19,18 +19,18 @@
 // Tracking sources
 #define NUMBER_OF_TRACKING_SOURCES 5
 #define BOARD_IN_RANGE 0
-#define BOARD_DIRTY 0
-#define START_VEL_TRANSITION 0
-#define END_VEL_TRANSITION 0
-#define CONTACT_DETECTED 0
+#define BOARD_DIRTY 1
+#define START_VEL_TRANSITION 2
+#define END_VEL_TRANSITION 3
+#define CONTACT_DETECTED 4
 
 // Tracking sinks
 #define NUMBER_OF_TRACKING_SINKS 5
 #define IDENTIFY_DIRTY_PATCH_READY 0
-#define START_APPROACH 0
-#define ENTER_BLEND_MODEL 0
-#define ENTER_SLOW_MOTION 0
-#define TERMINATE_NET 0
+#define START_APPROACH 1
+#define ENTER_BLEND_MODEL 2
+#define ENTER_SLOW_MOTION 3
+#define TERMINATE_NET 4
 
 //const char
 petrinet_t task_mediator_create_bringup_petrinet(char *name); //the name bringup can be changed as it was created for the mobile platform specifically
