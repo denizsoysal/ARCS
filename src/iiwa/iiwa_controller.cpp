@@ -12,9 +12,18 @@
 
 #include "string.h"
 #include <time.h>
+#include <math.h>
 
 #include "iiwa/iiwa_controller.hpp"
 #include <iostream>
+
+// TODO create local fsm states
+#define WAIT 0
+#define APPROACH 1
+#define BLEND 2
+#define SLOW 3
+#define STOP 4
+
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 
  * so it properly configures the schedule for the next iteration according
@@ -78,6 +87,7 @@ void iiwa_controller_creation_configure(activity_t *activity){
 
 // Allocating memory here
 void iiwa_controller_creation_compute(activity_t *activity){
+    activity->fsm = (FSM_t *) malloc(sizeof(FSM_t));
 	activity->state.lcsm_flags.creation_complete = true;
 }
 
@@ -193,11 +203,23 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 }
 
 void iiwa_controller_capability_configuration_compute(activity_t *activity){
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	// TODO bugfix the controller never leaves the capability configuration state
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
 	activity->state.lcsm_flags.capability_configuration_complete = true; //test
+
+	// Set the maximum velocity for each joint except for the last one to 0
+	// TODO Where would be a more appropriate location to place this?
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS-1;i++){
+        params->max_jnt_vel[i] = 0;
+		params->jnt_accel[i] = 0;
+		params->slow_jnt_vel[i] = 0;
+	}
+	params->max_jnt_vel[6] = 1;
+	params->jnt_accel[6] = 3;
+	params->slow_jnt_vel[6] = 0.1;
 }
 
 void iiwa_controller_capability_configuration(activity_t *activity){
@@ -294,16 +316,77 @@ void iiwa_controller_running_configure(activity_t *activity){
 
 
 void iiwa_controller_running_compute(activity_t *activity){
+	/*
+	KNOWN ISSUES:
+
+	 - not adaptive to changing goal once state machine enters BLEND
+	 - velocity does not get updated every time state changes, which could mean controller is slow to respond and overshoots under edge cases
+	*/
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	double magic_gain = 5;
+	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
-	//NEED A MUTEX ?? Don't know
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		continuous_state->iiwa_controller_state->cmd_jnt_vel[i] = magic_gain * (params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i]);
+	long cycle_time; // cycle time in seconds
+
+	double cmd_vel;
+	double prev_cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
+
+	// compute the current timespec, time difference, and then the previous timespec
+	timespec_get(&continuous_state->current_timespec, TIME_UTC);
+	if (discrete_state->first_run_compute_cycle){
+		cycle_time = 0.0;
+		discrete_state->first_run_compute_cycle = FALSE;
+	}else{
+	    cycle_time = (continuous_state->current_timespec.tv_nsec - continuous_state->prev_timespec.tv_nsec) / 1000000000.0;
 	}
-	//printf("Error on position: %f \n",(params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6]));
+	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
+
+	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
+
+	switch (activity->fsm[0].state){
+		case WAIT:
+		    if (fabs(error) > params->goal_buffer[6]){
+				activity->fsm[0].state = APPROACH;
+			}else{
+				cmd_vel = 0.0;
+			}
+		case APPROACH:
+		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
+				params->approach_jnt_vel[6] = prev_cmd_vel;
+                activity->fsm[0].state = BLEND;
+			}else{
+				cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
+				if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+                    cmd_vel = sgn(error) * params->max_jnt_vel[6];
+				}
+			}
+		case BLEND:
+		// TODO we assume that the goal will not change significantly from here on in
+		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->slow_buffer[6]){
+                activity->fsm[0].state = SLOW;
+			}else{
+                double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+
+				cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+			}
+		case SLOW:
+		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->goal_buffer[6]){
+				activity->fsm[0].state = STOP;
+			}else{
+				cmd_vel = params->slow_jnt_vel[6] * sgn(error);
+			}
+		case STOP:
+		    cmd_vel = 0;
+	}
+
+    // write the cmd_vel to state;
+    // TODO need a MUTEX?
+	continuous_state->iiwa_controller_state->cmd_jnt_vel[6] = cmd_vel;
 }
 
 void iiwa_controller_running(activity_t *activity){
@@ -379,3 +462,10 @@ const iiwa_controller_t ec_iiwa_controller ={
     .resource_configure_lcsm = iiwa_controller_resource_configure_lcsm,
     .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };
+
+// ========END OF 5C FUNCTIONS========
+// OTHER FUNCTIONS
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}

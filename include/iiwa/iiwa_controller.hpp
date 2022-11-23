@@ -34,6 +34,14 @@ typedef struct iiwa_controller_params_s{
     iiwa_state_t *iiwa_controller_params;
     double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 
+    double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    double  approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
+    double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
+    double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
+    double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
+
     struct iiwa_sensors_s{
 		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 		double 			meas_torques[LBRState::NUMBER_OF_JOINTS];
@@ -45,10 +53,14 @@ typedef struct iiwa_controller_params_s{
 // Continuous state
 typedef struct iiwa_controller_continuous_state_s{
     iiwa_params_t *iiwa_controller_state;
+
+    struct timespec prev_timespec;
+    struct timespec current_timespec;
 }iiwa_controller_continuous_state_t;
 
 //! (computational) discrete state
 typedef struct iiwa_controller_discrete_state_s{
+    bool first_run_compute_cycle = TRUE;
 }iiwa_controller_discrete_state_t;
 
 //! Coordination state
