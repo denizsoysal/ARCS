@@ -265,6 +265,7 @@ void iiwa_controller_pausing(activity_t *activity){
 // Running
 void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
+	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
     // Read the sensors from iiwa
@@ -280,6 +281,7 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	pthread_mutex_lock(&coord_state->goal_lock);
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
+		state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
 	}
 	pthread_mutex_unlock(&coord_state->goal_lock);
 }
@@ -298,6 +300,8 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 
 void iiwa_controller_running_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
@@ -312,6 +316,38 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
+
+	double error = state->jnt_pos_error[6];
+	double cmd_vel = state->iiwa_controller_state->cmd_jnt_vel[6];
+
+
+	// FSM TRANSITIONS
+	switch (activity->fsm[0].state){
+		case WAIT:
+		    if (fabs(error) > params->goal_buffer[6]){
+				activity->fsm[0].state = APPROACH;
+			}
+		case APPROACH:
+		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
+				// What to do here;
+				params->approach_jnt_vel[6] = state->local_cmd_jnt_vel[6];
+                activity->fsm[0].state = BLEND;
+			}
+		case BLEND:
+		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->slow_buffer[6]){
+                activity->fsm[0].state = SLOW;
+			}
+		case SLOW:
+		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->goal_buffer[6]){
+				activity->fsm[0].state = STOP;
+			}
+		case STOP:
+		// do nothing
+	}
 }
 
 void iiwa_controller_running_configure(activity_t *activity){
@@ -350,49 +386,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
 	int direction = sgn(error);
 
-/*
-switch (activity->fsm[0].state){
-		case WAIT:
-		    if (fabs(error) > params->goal_buffer[6]){
-				activity->fsm[0].state = APPROACH;
-			}else{
-				cmd_vel = 0.0;
-			}
-		case APPROACH:
-		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-				params->approach_jnt_vel[6] = prev_cmd_vel;
-                activity->fsm[0].state = BLEND;
-			}else{
-				cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
-				if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
-                    cmd_vel = sgn(error) * params->max_jnt_vel[6];
-				}
-			}
-		case BLEND:
-		// TODO we assume that the goal will not change significantly from here on in
-		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->slow_buffer[6]){
-                activity->fsm[0].state = SLOW;
-			}else{
-                double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
-
-				cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
-			}
-		case SLOW:
-		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->goal_buffer[6]){
-				activity->fsm[0].state = STOP;
-			}else{
-				cmd_vel = params->slow_jnt_vel[6] * sgn(error);
-			}
-		case STOP:
-		    cmd_vel = 0;
-	}
-
-
-*/
 	switch (activity->fsm[0].state){
 		case WAIT:
 			cmd_vel = 0.0;

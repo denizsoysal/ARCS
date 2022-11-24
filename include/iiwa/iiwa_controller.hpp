@@ -32,7 +32,9 @@ typedef struct iiwa_controller_s{
 // Parameters
 typedef struct iiwa_controller_params_s{
     iiwa_state_t *iiwa_controller_params;
-    double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS], local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+    double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+    // TODO where do you use global vs local?
+    double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 
     double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
@@ -58,6 +60,7 @@ typedef struct iiwa_controller_continuous_state_s{
     iiwa_params_t *iiwa_controller_state;
 
     double local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    double jnt_pos_error[LBRState::NUMBER_OF_JOINTS];
 
     struct timespec prev_timespec;
     struct timespec current_timespec;
@@ -67,10 +70,6 @@ typedef struct iiwa_controller_continuous_state_s{
 typedef struct iiwa_controller_discrete_state_s{
     bool first_run_compute_cycle = TRUE;
     // flags 
-    bool in_wait = FALSE;
-    bool in_approach = FALSE;
-    bool in_blend = FALSE;
-    bool in_slow = FALSE;
     bool in_contact = FALSE;
 }iiwa_controller_discrete_state_t;
 
