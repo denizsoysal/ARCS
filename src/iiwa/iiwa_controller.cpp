@@ -263,9 +263,8 @@ void iiwa_controller_pausing(activity_t *activity){
 }
 
 // Running
-void iiwa_controller_running_communicate(activity_t *activity){
+void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
-	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
     // Read the sensors from iiwa
@@ -283,6 +282,18 @@ void iiwa_controller_running_communicate(activity_t *activity){
 		params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
 	}
 	pthread_mutex_unlock(&coord_state->goal_lock);
+}
+
+void iiwa_controller_running_communicate_write(activity_t *activity){
+    iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	
+	// Write the commanded velocity
+	pthread_mutex_lock(coord_state->actuation_lock);
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+	}
+	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
 void iiwa_controller_running_coordinate(activity_t *activity){
@@ -314,14 +325,7 @@ void iiwa_controller_running_configure(activity_t *activity){
 	}
 }
 
-
 void iiwa_controller_running_compute(activity_t *activity){
-	/*
-	KNOWN ISSUES:
-
-	 - not adaptive to changing goal once state machine enters BLEND
-	 - velocity does not get updated every time state changes, which could mean controller is slow to respond and overshoots under edge cases
-	*/
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
@@ -330,9 +334,10 @@ void iiwa_controller_running_compute(activity_t *activity){
 	long cycle_time; // cycle time in seconds
 
 	double cmd_vel;
-	double prev_cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
+	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 
 	// compute the current timespec, time difference, and then the previous timespec
+	// TODO move this time tracking into the activity.h data structure
 	timespec_get(&continuous_state->current_timespec, TIME_UTC);
 	if (discrete_state->first_run_compute_cycle){
 		cycle_time = 0.0;
@@ -343,56 +348,77 @@ void iiwa_controller_running_compute(activity_t *activity){
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
+	int direction = sgn(error);
 
-	// switch (activity->fsm[0].state){
-	// 	case WAIT:
-	// 	    if (fabs(error) > params->goal_buffer[6]){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}else{
-	// 			cmd_vel = 0.0;
-	// 		}
-	// 	case APPROACH:
-	// 	    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-	// 			params->approach_jnt_vel[6] = prev_cmd_vel;
-    //             activity->fsm[0].state = BLEND;
-	// 		}else{
-	// 			cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
-	// 			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
-    //                 cmd_vel = sgn(error) * params->max_jnt_vel[6];
-	// 			}
-	// 		}
-	// 	case BLEND:
-	// 	// TODO we assume that the goal will not change significantly from here on in
-	// 	    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}else if (fabs(error) < params->slow_buffer[6]){
-    //             activity->fsm[0].state = SLOW;
-	// 		}else{
-    //             double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+/*
+switch (activity->fsm[0].state){
+		case WAIT:
+		    if (fabs(error) > params->goal_buffer[6]){
+				activity->fsm[0].state = APPROACH;
+			}else{
+				cmd_vel = 0.0;
+			}
+		case APPROACH:
+		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
+				params->approach_jnt_vel[6] = prev_cmd_vel;
+                activity->fsm[0].state = BLEND;
+			}else{
+				cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
+				if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+                    cmd_vel = sgn(error) * params->max_jnt_vel[6];
+				}
+			}
+		case BLEND:
+		// TODO we assume that the goal will not change significantly from here on in
+		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->slow_buffer[6]){
+                activity->fsm[0].state = SLOW;
+			}else{
+                double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
 
-	// 			cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
-	// 		}
-	// 	case SLOW:
-	// 	    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}else if (fabs(error) < params->goal_buffer[6]){
-	// 			activity->fsm[0].state = STOP;
-	// 		}else{
-	// 			cmd_vel = params->slow_jnt_vel[6] * sgn(error);
-	// 		}
-	// 	case STOP:
-	// 	    cmd_vel = 0;
-	// }
+				cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+			}
+		case SLOW:
+		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
+				activity->fsm[0].state = APPROACH;
+			}else if (fabs(error) < params->goal_buffer[6]){
+				activity->fsm[0].state = STOP;
+			}else{
+				cmd_vel = params->slow_jnt_vel[6] * sgn(error);
+			}
+		case STOP:
+		    cmd_vel = 0;
+	}
 
-    // write the cmd_vel to state;
-    // TODO need a MUTEX?
-	continuous_state->iiwa_controller_state->cmd_jnt_vel[6] = cmd_vel;
+
+*/
+	switch (activity->fsm[0].state){
+		case WAIT:
+			cmd_vel = 0.0;
+		case APPROACH:
+			cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
+			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+                cmd_vel = direction * params->max_jnt_vel[6];
+			}
+		case BLEND:
+            double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+		case SLOW:
+			cmd_vel = params->slow_jnt_vel[6] * direction;
+		case STOP:
+		    cmd_vel = 0;
+	}
+
+    // write the command velocity to the local variable
+	continuous_state->local_cmd_jnt_vel[6] = cmd_vel;
 }
 
 void iiwa_controller_running(activity_t *activity){
-	iiwa_controller_running_communicate(activity);
-	iiwa_controller_running_compute(activity);
+	iiwa_controller_running_communicate_read(activity);
 	iiwa_controller_running_coordinate(activity);
+	iiwa_controller_running_compute(activity);
+	iiwa_controller_running_communicate_write(activity);
 	iiwa_controller_running_configure(activity);
 }
 
