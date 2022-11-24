@@ -70,7 +70,7 @@ void task_mediator_creation(activity_t *activity){
 // Resource configuration
 void task_mediator_resource_configuration_coordinate(activity_t *activity){
      // Internal coordination
-    if (activity->state.lcsm_flags.resource_configuration_complete){
+    if (activity->state.lcsm_flags.resource_configuration_complete){ //shouldn't that be creation_complete?
         switch (activity->state.lcsm_protocol){ 
             case EXECUTION:
                 activity->lcsm.state = RUNNING;
@@ -108,7 +108,7 @@ void task_mediator_resource_configuration_compute(activity_t *activity){
     activity->state.petrinet_flag_map[0].tracking_sources.flags[CONTACT_DETECTED] = coord_state->contact_detected;
 
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[IDENTIFY_DIRTY_PATCH_READY] = &coord_state->identify_dirty_patch_ready;
-    activity->state.petrinet_flag_map[0].tracking_sinks.flags[INITIATE_MOTION] = &coord_state->initiate_motion;
+    activity->state.petrinet_flag_map[0].tracking_sinks.flags[INITIATE_MOTION] = coord_state->initiate_motion;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[ENTER_BLEND_MODEL] = &coord_state->enter_blend_model;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[ENTER_SLOW_MOTION] = &coord_state->enter_slow_motion;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[TERMINATE_NET] = &coord_state->terminate_net;
@@ -127,6 +127,44 @@ void task_mediator_running_coordinate(activity_t *activity){
     task_mediator_coordination_state_t *coord_state = (task_mediator_coordination_state_t *) activity->state.coordination_state;
     // Internal coordination
     // Based on the FSM
+    // switch (activity->fsm[0].state){
+    //     case (FSM_STATE_WAIT):
+    //         printf("Value of board in range : %d \n", *coord_state->board_in_range);
+    //         printf("Value of board dirty : %d \n\n", *coord_state->board_dirty);
+    //         // Evaluating a flag associated to a token of a petrinet
+    //         communicate_token_flags_flag_map(&activity->petrinet[0], 
+    //             &activity->state.petrinet_flag_map[0]);
+    //         if (coord_state->initiate_motion)
+    //             activity->fsm[0].state = FSM_STATE_APPROACH;
+    //         break;
+    //     case (FSM_STATE_APPROACH):
+    //         printf("TASK FSM APPROACH \n");
+    //         printf("Value of start vel trans : %d \n", *coord_state->start_vel_transition);
+    //         communicate_token_flags_flag_map(&activity->petrinet[0], 
+    //             &activity->state.petrinet_flag_map[0]);
+    //         if (coord_state->enter_blend_model)
+    //             activity->fsm[0].state = FSM_STATE_VEL_TRANSITION;
+    //         break;
+    //     case (FSM_STATE_VEL_TRANSITION):
+    //         printf("TASK FSM VEL TRANSITION \n");
+    //         communicate_token_flags_flag_map(&activity->petrinet[0], 
+    //             &activity->state.petrinet_flag_map[0]);
+    //         if (coord_state->enter_slow_motion)
+    //             activity->fsm[0].state = FSM_STATE_CONTACT;
+    //         break;
+    //     case (FSM_STATE_CONTACT):
+    //         printf("TASK FSM CONTACT \n");
+    //         communicate_token_flags_flag_map(&activity->petrinet[0], 
+    //             &activity->state.petrinet_flag_map[0]);
+    //         if (coord_state->terminate_net)
+    //             activity->fsm[0].state = FSM_STATE_FINAL;
+    //         break;
+    //     case (FSM_STATE_FINAL):
+    //         printf("TASK FSM FINAL \n");
+    //         activity->state.lcsm_flags.running_complete = true;
+    //         break;
+    // }
+
     switch (activity->fsm[0].state){
         case (FSM_STATE_WAIT):
             printf("Value of board in range : %d \n", *coord_state->board_in_range);
@@ -134,33 +172,11 @@ void task_mediator_running_coordinate(activity_t *activity){
             // Evaluating a flag associated to a token of a petrinet
             communicate_token_flags_flag_map(&activity->petrinet[0], 
                 &activity->state.petrinet_flag_map[0]);
-            if (coord_state->initiate_motion)
-                activity->fsm[0].state = FSM_STATE_APPROACH;
-            break;
-        case (FSM_STATE_APPROACH):
-            printf("TASK FSM APPROACH \n");
-            printf("Value of start vel trans : %d \n", *coord_state->start_vel_transition);
-            communicate_token_flags_flag_map(&activity->petrinet[0], 
-                &activity->state.petrinet_flag_map[0]);
-            if (coord_state->enter_blend_model)
-                activity->fsm[0].state = FSM_STATE_VEL_TRANSITION;
-            break;
-        case (FSM_STATE_VEL_TRANSITION):
-            printf("TASK FSM VEL TRANSITION \n");
-            communicate_token_flags_flag_map(&activity->petrinet[0], 
-                &activity->state.petrinet_flag_map[0]);
-            if (coord_state->enter_slow_motion)
-                activity->fsm[0].state = FSM_STATE_CONTACT;
-            break;
-        case (FSM_STATE_CONTACT):
-            printf("TASK FSM CONTACT \n");
-            communicate_token_flags_flag_map(&activity->petrinet[0], 
-                &activity->state.petrinet_flag_map[0]);
-            if (coord_state->terminate_net)
+            if (*coord_state->initiate_motion)
                 activity->fsm[0].state = FSM_STATE_FINAL;
             break;
         case (FSM_STATE_FINAL):
-            printf("TASK FSM FINAL \n");
+            printf("Now the controller fsm is triggered \n");
             activity->state.lcsm_flags.running_complete = true;
             break;
     }

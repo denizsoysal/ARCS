@@ -157,8 +157,10 @@ void iiwa_controller_resource_configuration_configure(activity_t *activity){
 	}
 }
 
+//I need to update this function 
 void iiwa_controller_resource_configuration_compute(activity_t *activity){
-	// What to put here ?
+	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+
 	activity->state.lcsm_flags.resource_configuration_complete = true;
 }
 
@@ -384,7 +386,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
-	int direction = sgn(error);
+	int direction = sgn(error); 
 
 	switch (activity->fsm[0].state){
 		case WAIT:

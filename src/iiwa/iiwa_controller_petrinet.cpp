@@ -53,36 +53,30 @@ flag_token_conversion_map_t iiwa_controller_petrinet_flag_map = {
         }
 };
 
-// I am here in the modification
-
-petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
+petrinet_t iiwa_controller_create_petrinet(char *name) {
     petrinet_t *p = init_petrinet(name);
 
-    place_t *p_board_in_range= create_place(p, bringup_tracking_source_names[BOARD_IN_RANGE]);
-    place_t *p_board_dirty = create_place(p, bringup_tracking_source_names[BOARD_DIRTY]);
-    place_t *p_start_vel_transition = create_place(p, bringup_tracking_source_names[START_VEL_TRANSITION]);
-    place_t *p_end_vel_transition = create_place(p, bringup_tracking_source_names[END_VEL_TRANSITION]);
-    place_t *p_contact_detected = create_place(p, bringup_tracking_source_names[CONTACT_DETECTED]);
+    place_t *p_initiate_motion = create_place(p, controller_tracking_source_names[INITIATE_MOTION]);
+    place_t *p_start_vel_transition = create_place(p, controller_tracking_source_names[START_VEL_TRANSITION]);
+    place_t *p_end_vel_transition = create_place(p, controller_tracking_source_names[END_VEL_TRANSITION]);
+    place_t *p_contact_detected = create_place(p, controller_tracking_source_names[CONTACT_DETECTED]);
 
-    place_t *p_identify_dirty_patch_ready = create_place(p, bringup_tracking_sink_names[IDENTIFY_DIRTY_PATCH_READY]);
-    place_t *p_start_approach = create_place(p, bringup_tracking_sink_names[START_APPROACH]);
-    place_t *p_enter_blend_model = create_place(p, bringup_tracking_sink_names[ENTER_BLEND_MODEL]);
-    place_t *p_enter_slow_motion = create_place(p, bringup_tracking_sink_names[ENTER_SLOW_MOTION]);
-    place_t *p_terminate_net = create_place(p, bringup_tracking_sink_names[TERMINATE_NET]);
+    place_t *p_start_approach = create_place(p, controller_tracking_sink_names[START_APPROACH]);
+    place_t *p_enter_blend_model = create_place(p, controller_tracking_sink_names[ENTER_BLEND_MODEL]);
+    place_t *p_enter_slow_motion = create_place(p, controller_tracking_sink_names[ENTER_SLOW_MOTION]);
+    place_t *p_terminate_net = create_place(p, controller_tracking_sink_names[TERMINATE_NET]);
 
     transition_behaviour_t b1 = {
             .condition = cond_Black1,
             .consumption_behaviour=consume_Black1,
             .production_behaviour=produce_Black1
-    }; //this behavior is when all places before transition needs to be filled to fire the tr. After, they are all consumed and all output places are filled
+    }; 
 
     // TRANSITIONS
     transition_t *t1 = create_transition(p, "t1");
     add_behaviour(t1, &b1);
 
-    agedge(p, p_board_in_range, t1, "1", TRUE);
-    agedge(p, p_board_dirty, t1, "1", TRUE);
-    agedge(p, t1, p_identify_dirty_patch_ready, "1", TRUE);
+    agedge(p, p_initiate_motion, t1, "1", TRUE);
     agedge(p, t1, p_start_approach, "1", TRUE);
 
     transition_t *t2 = create_transition(p, "t2");
@@ -109,6 +103,6 @@ petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
     return *p;
 }
 
-void task_mediator_reset_bringup_petrinet(petrinet_t *p) {
+void iiwa_controller_reset_petrinet(petrinet_t *p) {
         ;
 }
