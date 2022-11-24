@@ -37,6 +37,7 @@ typedef struct iiwa_controller_params_s{
     double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 
     double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    // TODO approach_jnt_vel should be a state
     double  approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
@@ -84,4 +85,10 @@ typedef struct iiwa_controller_coordination_state_s {
 } iiwa_controller_coordination_state_t;
 
 extern const iiwa_controller_t ec_iiwa_controller;
+
+// Useful Functions
+// TODO should just declaration be in header?
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 #endif //iiwa_controller_HPP

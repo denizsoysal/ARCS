@@ -162,6 +162,9 @@ void iiwa_controller_resource_configuration_compute(activity_t *activity){
 	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
 	activity->state.lcsm_flags.resource_configuration_complete = true;
+
+	// TODO Update this
+	activity->fsm[0].state = WAIT;
 }
 
 void iiwa_controller_resource_configuration(activity_t *activity){
@@ -210,18 +213,7 @@ void iiwa_controller_capability_configuration_compute(activity_t *activity){
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
-	activity->state.lcsm_flags.capability_configuration_complete = true; //test
-
-	// Set the maximum velocity for each joint except for the last one to 0
-	// TODO Where would be a more appropriate location to place this?
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS-1;i++){
-        params->max_jnt_vel[i] = 0;
-		params->jnt_accel[i] = 0;
-		params->slow_jnt_vel[i] = 0;
-	}
-	params->max_jnt_vel[6] = 1;
-	params->jnt_accel[6] = 3;
-	params->slow_jnt_vel[6] = 0.1;
+	activity->state.lcsm_flags.capability_configuration_complete = true;
 }
 
 void iiwa_controller_capability_configuration(activity_t *activity){
@@ -332,7 +324,7 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 		case APPROACH:
 		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
 				// What to do here;
-				params->approach_jnt_vel[6] = state->local_cmd_jnt_vel[6];
+				params->approach_jnt_vel[6] = continuous_state->local_cmd_jnt_vel[6];
                 activity->fsm[0].state = BLEND;
 			}
 		case BLEND:
@@ -348,8 +340,10 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 				activity->fsm[0].state = STOP;
 			}
 		case STOP:
-		// do nothing
+		    break;
 	}
+
+	printf("The controller state is: %d \n", activity->fsm[0].state);
 }
 
 void iiwa_controller_running_configure(activity_t *activity){
@@ -369,10 +363,11 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
-	long cycle_time; // cycle time in seconds
+	long cycle_time; // cycle time in secondefined types if operator '>' is overloaded
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
+	double alpha;
 
 	// compute the current timespec, time difference, and then the previous timespec
 	// TODO move this time tracking into the activity.h data structure
@@ -397,7 +392,7 @@ void iiwa_controller_running_compute(activity_t *activity){
                 cmd_vel = direction * params->max_jnt_vel[6];
 			}
 		case BLEND:
-            double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+            alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
 			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
 		case SLOW:
 			cmd_vel = params->slow_jnt_vel[6] * direction;
@@ -483,10 +478,3 @@ const iiwa_controller_t ec_iiwa_controller ={
     .resource_configure_lcsm = iiwa_controller_resource_configure_lcsm,
     .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };
-
-// ========END OF 5C FUNCTIONS========
-// OTHER FUNCTIONS
-
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}

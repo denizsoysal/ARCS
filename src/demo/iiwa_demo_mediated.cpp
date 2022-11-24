@@ -68,12 +68,13 @@ void* set_actuation(void* activity){
 			if (t < 1){
 				params->goal_jnt_pos[6] = 0;
 			}else{
-				if (t<5){
-					params->goal_jnt_pos[6] = 1+ (t-1)/10;
-				}
-				else{
-					params->goal_jnt_pos[6] = 1;
-				}
+				params->goal_jnt_pos[6] = 1;
+				// if (t<5){
+				// 	params->goal_jnt_pos[6] = 1+ (t-1)/10;
+				// }
+				// else{
+				// 	params->goal_jnt_pos[6] = 1;
+				// }
 			}
 
             fpt2 = fopen("setpoint.csv", "a+");
@@ -206,6 +207,14 @@ int main(int argc, char**argv){
 	// Manually 
 	virtual_coord_state->execution_request = true; 
 	//iiwa_controller_coord_state->execution_request = true; removed because waits for the task coordinator
+
+	// Configure the Controller Parameters
+	iiwa_controller_params->max_jnt_vel[6] = 1;
+    iiwa_controller_params->slow_jnt_vel[6] = 0.1;
+    iiwa_controller_params->jnt_accel[6] = 10;
+    iiwa_controller_params->approach_buffer[6] = 0.2;
+    iiwa_controller_params->slow_buffer[6] = 0.05;
+    iiwa_controller_params->goal_buffer[6] = 0.01;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
