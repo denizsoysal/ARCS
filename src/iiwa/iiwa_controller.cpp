@@ -302,7 +302,7 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 
 void iiwa_controller_running_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_continuous_state_t* continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
@@ -319,8 +319,8 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 
-	double error = state->jnt_pos_error[6];
-	double cmd_vel = state->iiwa_controller_state->cmd_jnt_vel[6];
+	double error = continuous_state->jnt_pos_error[6];
+	double cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
 
 
 	// FSM TRANSITIONS
