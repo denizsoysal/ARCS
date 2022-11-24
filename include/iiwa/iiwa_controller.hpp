@@ -66,6 +66,12 @@ typedef struct iiwa_controller_continuous_state_s{
 //! (computational) discrete state
 typedef struct iiwa_controller_discrete_state_s{
     bool first_run_compute_cycle = TRUE;
+    // flags 
+    bool in_wait = FALSE;
+    bool in_approach = FALSE;
+    bool in_blend = FALSE;
+    bool in_slow = FALSE;
+    bool in_contact = FALSE;
 }iiwa_controller_discrete_state_t;
 
 //! Coordination state
