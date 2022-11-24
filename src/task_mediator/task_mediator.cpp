@@ -108,7 +108,7 @@ void task_mediator_resource_configuration_compute(activity_t *activity){
     activity->state.petrinet_flag_map[0].tracking_sources.flags[CONTACT_DETECTED] = coord_state->contact_detected;
 
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[IDENTIFY_DIRTY_PATCH_READY] = &coord_state->identify_dirty_patch_ready;
-    activity->state.petrinet_flag_map[0].tracking_sinks.flags[START_APPROACH] = &coord_state->start_approach;
+    activity->state.petrinet_flag_map[0].tracking_sinks.flags[INITIATE_MOTION] = &coord_state->initiate_motion;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[ENTER_BLEND_MODEL] = &coord_state->enter_blend_model;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[ENTER_SLOW_MOTION] = &coord_state->enter_slow_motion;
     activity->state.petrinet_flag_map[0].tracking_sinks.flags[TERMINATE_NET] = &coord_state->terminate_net;
@@ -134,7 +134,7 @@ void task_mediator_running_coordinate(activity_t *activity){
             // Evaluating a flag associated to a token of a petrinet
             communicate_token_flags_flag_map(&activity->petrinet[0], 
                 &activity->state.petrinet_flag_map[0]);
-            if (coord_state->start_approach)
+            if (coord_state->initiate_motion)
                 activity->fsm[0].state = FSM_STATE_APPROACH;
             break;
         case (FSM_STATE_APPROACH):

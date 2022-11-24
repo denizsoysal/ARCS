@@ -344,45 +344,45 @@ void iiwa_controller_running_compute(activity_t *activity){
 
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
 
-	switch (activity->fsm[0].state){
-		case WAIT:
-		    if (fabs(error) > params->goal_buffer[6]){
-				activity->fsm[0].state = APPROACH;
-			}else{
-				cmd_vel = 0.0;
-			}
-		case APPROACH:
-		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-				params->approach_jnt_vel[6] = prev_cmd_vel;
-                activity->fsm[0].state = BLEND;
-			}else{
-				cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
-				if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
-                    cmd_vel = sgn(error) * params->max_jnt_vel[6];
-				}
-			}
-		case BLEND:
-		// TODO we assume that the goal will not change significantly from here on in
-		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->slow_buffer[6]){
-                activity->fsm[0].state = SLOW;
-			}else{
-                double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+	// switch (activity->fsm[0].state){
+	// 	case WAIT:
+	// 	    if (fabs(error) > params->goal_buffer[6]){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}else{
+	// 			cmd_vel = 0.0;
+	// 		}
+	// 	case APPROACH:
+	// 	    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
+	// 			params->approach_jnt_vel[6] = prev_cmd_vel;
+    //             activity->fsm[0].state = BLEND;
+	// 		}else{
+	// 			cmd_vel = prev_cmd_vel + sgn(error) * params->jnt_accel[6] * cycle_time;
+	// 			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+    //                 cmd_vel = sgn(error) * params->max_jnt_vel[6];
+	// 			}
+	// 		}
+	// 	case BLEND:
+	// 	// TODO we assume that the goal will not change significantly from here on in
+	// 	    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}else if (fabs(error) < params->slow_buffer[6]){
+    //             activity->fsm[0].state = SLOW;
+	// 		}else{
+    //             double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
 
-				cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
-			}
-		case SLOW:
-		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->goal_buffer[6]){
-				activity->fsm[0].state = STOP;
-			}else{
-				cmd_vel = params->slow_jnt_vel[6] * sgn(error);
-			}
-		case STOP:
-		    cmd_vel = 0;
-	}
+	// 			cmd_vel = sgn(error) * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+	// 		}
+	// 	case SLOW:
+	// 	    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}else if (fabs(error) < params->goal_buffer[6]){
+	// 			activity->fsm[0].state = STOP;
+	// 		}else{
+	// 			cmd_vel = params->slow_jnt_vel[6] * sgn(error);
+	// 		}
+	// 	case STOP:
+	// 	    cmd_vel = 0;
+	// }
 
     // write the cmd_vel to state;
     // TODO need a MUTEX?

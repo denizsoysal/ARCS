@@ -6,41 +6,39 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * @file task_mediator_petrinet.cpp
- * @date November, 2022
+ * @file iiwa_controller_petrinet.cpp
+ * @date November 24, 2022
  **/
 
-#include "task_mediator/task_mediator_petrinet.hpp"
+#include "iiwa/iiwa_controller_petrinet.hpp"
 
 // Tracking sources
-char* bringup_tracking_source_names[] = {//const
-    "board_in_range",
-    "board_dirty",
+char* controller_tracking_source_names[] = {//const
+    "initiate_motion",
     "start_vel_transition",
     "end_vel_transition",
     "contact_detected"
 };
-bool* bringup_tracking_source_flags[NUMBER_OF_TRACKING_SOURCES];
+bool* cotroller_tracking_source_flags[NUMBER_OF_TRACKING_SOURCES];
 
 // Tracking sinks
-char* bringup_tracking_sink_names[] = {//const
-    "identify_dirty_patch_ready",
-    "initiate_motion",
+char* controller_tracking_sink_names[] = {//const
+    "start_approach",
     "enter_blend_model",
     "enter_slow_motion",
     "terminate_net"
 };
-bool* bringup_tracking_sink_flags[NUMBER_OF_TRACKING_SINKS];
+bool* controller_tracking_sink_flags[NUMBER_OF_TRACKING_SINKS];
 
-flag_token_conversion_map_t task_mediator_bringup_petrinet_flag_map = {
+flag_token_conversion_map_t iiwa_controller_petrinet_flag_map = {
         .converting_sources = {
                 .names = NULL,
                 .flags = NULL,
                 .number_of_flags = 0
         },
         .tracking_sources = {
-                .names = bringup_tracking_source_names,
-                .flags = bringup_tracking_source_flags,
+                .names = controller_tracking_source_names,
+                .flags = controller_tracking_source_flags,
                 .number_of_flags = NUMBER_OF_TRACKING_SOURCES
         },
         .converting_sinks = {
@@ -49,11 +47,13 @@ flag_token_conversion_map_t task_mediator_bringup_petrinet_flag_map = {
                 .number_of_flags = 0
         },
         .tracking_sinks = {
-                .names = bringup_tracking_sink_names,
-                .flags = bringup_tracking_sink_flags,
+                .names = controller_tracking_sink_names,
+                .flags = controller_tracking_sink_flags,
                 .number_of_flags = NUMBER_OF_TRACKING_SINKS
         }
 };
+
+// I am here in the modification
 
 petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
     petrinet_t *p = init_petrinet(name);
@@ -65,7 +65,7 @@ petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
     place_t *p_contact_detected = create_place(p, bringup_tracking_source_names[CONTACT_DETECTED]);
 
     place_t *p_identify_dirty_patch_ready = create_place(p, bringup_tracking_sink_names[IDENTIFY_DIRTY_PATCH_READY]);
-    place_t *p_initiate_motion = create_place(p, bringup_tracking_sink_names[INITIATE_MOTION]);
+    place_t *p_start_approach = create_place(p, bringup_tracking_sink_names[START_APPROACH]);
     place_t *p_enter_blend_model = create_place(p, bringup_tracking_sink_names[ENTER_BLEND_MODEL]);
     place_t *p_enter_slow_motion = create_place(p, bringup_tracking_sink_names[ENTER_SLOW_MOTION]);
     place_t *p_terminate_net = create_place(p, bringup_tracking_sink_names[TERMINATE_NET]);
@@ -83,12 +83,12 @@ petrinet_t task_mediator_create_bringup_petrinet(char *name) {//const
     agedge(p, p_board_in_range, t1, "1", TRUE);
     agedge(p, p_board_dirty, t1, "1", TRUE);
     agedge(p, t1, p_identify_dirty_patch_ready, "1", TRUE);
-    agedge(p, t1, p_initiate_motion, "1", TRUE);
+    agedge(p, t1, p_start_approach, "1", TRUE);
 
     transition_t *t2 = create_transition(p, "t2");
     add_behaviour(t2, &b1);
 
-    agedge(p, p_initiate_motion, t2, "1", TRUE);
+    agedge(p, p_start_approach, t2, "1", TRUE);
     agedge(p, p_start_vel_transition, t2, "1", TRUE);
     agedge(p, t2, p_enter_blend_model, "1", TRUE);
 

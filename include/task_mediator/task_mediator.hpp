@@ -49,7 +49,7 @@ typedef struct task_mediator_coordination_state_s {
     bool *contact_detected;
 
     // To external activities
-    bool start_approach;
+    bool initiate_motion;
     bool enter_blend_model;
     bool enter_slow_motion;
 

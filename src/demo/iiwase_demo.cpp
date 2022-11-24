@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 // AACAL
 #include <five_c/thread/thread.h>
@@ -23,9 +24,6 @@
 #include <iiwa_activity.hpp>
 
 #include "iiwa/iiwa_controller.hpp"
-
-#include <pthread.h>
-#include <unistd.h>
 
 
 bool *deinitialisation_request;
