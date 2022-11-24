@@ -157,8 +157,10 @@ void iiwa_controller_resource_configuration_configure(activity_t *activity){
 	}
 }
 
+//I need to update this function 
 void iiwa_controller_resource_configuration_compute(activity_t *activity){
-	// What to put here ?
+	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+
 	activity->state.lcsm_flags.resource_configuration_complete = true;
 }
 
@@ -298,6 +300,36 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 
 void iiwa_controller_running_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	
+	//Coordinating internal state
+	// switch (activity->fsm[0].state){
+    //     case (WAIT):
+	// 		printf("Controller waits \n");
+    //         if (coord_state->start_approach)
+    //             activity->fsm[0].state = APPROACH;
+    //         break;
+    //     case (APPROACH):
+    //         printf("CONTROLLER APPROACH \n");
+    //         if (coord_state->enter_blend_model)
+    //             activity->fsm[0].state = BLEND;
+    //         break;
+    //     case (BLEND):
+    //         printf("CONTROLLER BLEND \n");
+    //         if (coord_state->enter_slow_motion)
+    //             activity->fsm[0].state = SLOW;
+    //         break;
+    //     case (SLOW):
+    //         printf("CONTROLLER SLOW \n");
+    //         if (coord_state->terminate_net)
+    //             activity->fsm[0].state = STOP;
+    //         break;
+    //     case (STOP):
+    //         printf("CONTROLLER STOPPED \n");
+    //         activity->state.lcsm_flags.running_complete = true;
+    //         break;
+    // }
+	
+	
 	// Coordinating with other activities
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
@@ -348,7 +380,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
-	int direction = sgn(error);
+	int direction = sgn(error); 
 
 /*
 switch (activity->fsm[0].state){

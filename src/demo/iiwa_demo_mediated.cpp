@@ -200,9 +200,12 @@ int main(int argc, char**argv){
 	iiwa_controller_params->iiwa_controller_params = &virtual_continuous_state->iiwa_state;
 	iiwa_controller_continuous_state->iiwa_controller_state = &virtual_params->iiwa_params;
 
+	// Task <-> Controller  
+	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
+
 	// Manually 
-	virtual_coord_state->execution_request = true;
-	iiwa_controller_coord_state->execution_request = true;
+	virtual_coord_state->execution_request = true; 
+	//iiwa_controller_coord_state->execution_request = true; removed because waits for the task coordinator
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
