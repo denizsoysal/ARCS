@@ -325,7 +325,6 @@ void iiwa_controller_running_configure(activity_t *activity){
 	}
 }
 
-
 void iiwa_controller_running_compute(activity_t *activity){
 	/*
 	KNOWN ISSUES:
@@ -341,7 +340,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	long cycle_time; // cycle time in seconds
 
 	double cmd_vel;
-	double prev_cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
+	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 
 	// compute the current timespec, time difference, and then the previous timespec
 	timespec_get(&continuous_state->current_timespec, TIME_UTC);
@@ -395,9 +394,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		    cmd_vel = 0;
 	}
 
-    // write the cmd_vel to state;
-    // TODO need a MUTEX?
-	continuous_state->iiwa_controller_state->cmd_jnt_vel[6] = cmd_vel;
+    // write the command velocity to the local variable
+	continuous_state->local_cmd_jnt_vel[6] = cmd_vel;
 }
 
 void iiwa_controller_running(activity_t *activity){
