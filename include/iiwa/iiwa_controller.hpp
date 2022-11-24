@@ -52,7 +52,12 @@ typedef struct iiwa_controller_params_s{
 
 // Continuous state
 typedef struct iiwa_controller_continuous_state_s{
+    // TODO we should write our own data structures here because:
+    //  - we make it more independent of iiwa_interface and general to different robots
+    //  - we remove extra fiels from this struct that we don't use, like fri_port, etc...
     iiwa_params_t *iiwa_controller_state;
+
+    double local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 
     struct timespec prev_timespec;
     struct timespec current_timespec;

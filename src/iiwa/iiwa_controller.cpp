@@ -263,9 +263,8 @@ void iiwa_controller_pausing(activity_t *activity){
 }
 
 // Running
-void iiwa_controller_running_communicate(activity_t *activity){
+void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
-	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
     // Read the sensors from iiwa
@@ -283,6 +282,18 @@ void iiwa_controller_running_communicate(activity_t *activity){
 		params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
 	}
 	pthread_mutex_unlock(&coord_state->goal_lock);
+}
+
+void iiwa_controller_running_communicate_write(activity_t *activity){
+    iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	
+	// Write the commanded velocity
+	pthread_mutex_lock(coord_state->actuation_lock);
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+	}
+	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
 void iiwa_controller_running_coordinate(activity_t *activity){
@@ -390,9 +401,10 @@ void iiwa_controller_running_compute(activity_t *activity){
 }
 
 void iiwa_controller_running(activity_t *activity){
-	iiwa_controller_running_communicate(activity);
-	iiwa_controller_running_compute(activity);
+	iiwa_controller_running_communicate_read(activity);
 	iiwa_controller_running_coordinate(activity);
+	iiwa_controller_running_compute(activity);
+	iiwa_controller_running_communicate_write(activity);
 	iiwa_controller_running_configure(activity);
 }
 
