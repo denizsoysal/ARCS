@@ -326,12 +326,6 @@ void iiwa_controller_running_configure(activity_t *activity){
 }
 
 void iiwa_controller_running_compute(activity_t *activity){
-	/*
-	KNOWN ISSUES:
-
-	 - not adaptive to changing goal once state machine enters BLEND
-	 - velocity does not get updated every time state changes, which could mean controller is slow to respond and overshoots under edge cases
-	*/
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
@@ -343,6 +337,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 
 	// compute the current timespec, time difference, and then the previous timespec
+	// TODO move this time tracking into the activity.h data structure
 	timespec_get(&continuous_state->current_timespec, TIME_UTC);
 	if (discrete_state->first_run_compute_cycle){
 		cycle_time = 0.0;
@@ -353,8 +348,10 @@ void iiwa_controller_running_compute(activity_t *activity){
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
 	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
+	int direction = sgn(error);
 
-	switch (activity->fsm[0].state){
+/*
+switch (activity->fsm[0].state){
 		case WAIT:
 		    if (fabs(error) > params->goal_buffer[6]){
 				activity->fsm[0].state = APPROACH;
@@ -390,6 +387,25 @@ void iiwa_controller_running_compute(activity_t *activity){
 			}else{
 				cmd_vel = params->slow_jnt_vel[6] * sgn(error);
 			}
+		case STOP:
+		    cmd_vel = 0;
+	}
+
+
+*/
+	switch (activity->fsm[0].state){
+		case WAIT:
+			cmd_vel = 0.0;
+		case APPROACH:
+			cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
+			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+                cmd_vel = direction * params->max_jnt_vel[6];
+			}
+		case BLEND:
+            double alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+		case SLOW:
+			cmd_vel = params->slow_jnt_vel[6] * direction;
 		case STOP:
 		    cmd_vel = 0;
 	}
