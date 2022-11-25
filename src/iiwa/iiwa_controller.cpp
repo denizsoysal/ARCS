@@ -240,6 +240,7 @@ void iiwa_controller_pausing_coordinate(activity_t *activity){
 			activity->lcsm.state = CAPABILITY_CONFIGURATION;
 			break;
 	}
+	
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
@@ -285,6 +286,7 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	
 	// Write the commanded velocity
+	// printf("Command velocity: %f \n", state->local_cmd_jnt_vel[6]);
 	pthread_mutex_lock(coord_state->actuation_lock);
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
@@ -321,29 +323,33 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 		    if (fabs(error) > params->goal_buffer[6]){
 				activity->fsm[0].state = APPROACH;
 			}
+			break;
 		case APPROACH:
 		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
 				// What to do here;
 				params->approach_jnt_vel[6] = continuous_state->local_cmd_jnt_vel[6];
                 activity->fsm[0].state = BLEND;
 			}
+			break;
 		case BLEND:
 		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
 				activity->fsm[0].state = APPROACH;
 			}else if (fabs(error) < params->slow_buffer[6]){
                 activity->fsm[0].state = SLOW;
 			}
+			break;
 		case SLOW:
 		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
 				activity->fsm[0].state = APPROACH;
 			}else if (fabs(error) < params->goal_buffer[6]){
 				activity->fsm[0].state = STOP;
 			}
+			break;
 		case STOP:
 		    break;
 	}
 
-	printf("The controller state is: %d \n", activity->fsm[0].state);
+	//printf("The controller state is: %d \n", activity->fsm[0].state);
 }
 
 void iiwa_controller_running_configure(activity_t *activity){
@@ -363,7 +369,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
-	long cycle_time; // cycle time in secondefined types if operator '>' is overloaded
+	// This was set to long type before but it seems to not work in the computations below (always 0)
+	double cycle_time; // cycle time in secondefined types if operator '>' is overloaded
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
@@ -376,7 +383,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		cycle_time = 0.0;
 		discrete_state->first_run_compute_cycle = FALSE;
 	}else{
-	    cycle_time = (continuous_state->current_timespec.tv_nsec - continuous_state->prev_timespec.tv_nsec) / 1000000000.0;
+	    // cycle_time = (continuous_state->current_timespec.tv_nsec - continuous_state->prev_timespec.tv_nsec) / 1000000000.0; // This gives strange values, should it be set to a constant
+		cycle_time = 0.1; //100ms
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
@@ -386,18 +394,24 @@ void iiwa_controller_running_compute(activity_t *activity){
 	switch (activity->fsm[0].state){
 		case WAIT:
 			cmd_vel = 0.0;
+			break;
 		case APPROACH:
 			cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
+			printf("The command velocity is: %f \n", cmd_vel);
 			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
                 cmd_vel = direction * params->max_jnt_vel[6];
 			}
+			break;
 		case BLEND:
             alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
 			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+			break;
 		case SLOW:
 			cmd_vel = params->slow_jnt_vel[6] * direction;
+			break;
 		case STOP:
-		    cmd_vel = 0;
+		    cmd_vel = 0.0;
+			break;
 	}
 
     // write the command velocity to the local variable
@@ -405,6 +419,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 }
 
 void iiwa_controller_running(activity_t *activity){
+	printf("The controller state is: %d \n", activity->fsm[0].state);
 	iiwa_controller_running_communicate_read(activity);
 	iiwa_controller_running_coordinate(activity);
 	iiwa_controller_running_compute(activity);

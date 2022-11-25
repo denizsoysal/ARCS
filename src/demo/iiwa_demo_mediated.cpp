@@ -53,6 +53,7 @@ void* set_actuation(void* activity){
 
 	int dt = 500; // ms
 	double t = 0;
+	double local_time = 0;
 	
 	while(!(*deinitialisation_request)){
 		usleep(1000*dt);  // time in microseconds
@@ -65,7 +66,7 @@ void* set_actuation(void* activity){
 			params->goal_jnt_pos[3] = 0;
 			params->goal_jnt_pos[4] = 0;
 			params->goal_jnt_pos[5] = 0;
-			if (t < 1){
+			if (local_time < 1){
 				params->goal_jnt_pos[6] = 0;
 			}else{
 				params->goal_jnt_pos[6] = 1;
@@ -82,10 +83,11 @@ void* set_actuation(void* activity){
 			fclose(fpt2);
 
 			pthread_mutex_unlock(&coord_state->goal_lock);
-			t += (double)dt/1000;
+			local_time += (double)dt/1000;
 
 			// printf("%f\n", t);
 		}
+		t += (double)dt/1000;
 	}
 	return 0;
 }
@@ -211,7 +213,7 @@ int main(int argc, char**argv){
 	// Configure the Controller Parameters
 	iiwa_controller_params->max_jnt_vel[6] = 1;
     iiwa_controller_params->slow_jnt_vel[6] = 0.1;
-    iiwa_controller_params->jnt_accel[6] = 10;
+    iiwa_controller_params->jnt_accel[6] = 1; //10
     iiwa_controller_params->approach_buffer[6] = 0.2;
     iiwa_controller_params->slow_buffer[6] = 0.05;
     iiwa_controller_params->goal_buffer[6] = 0.01;
