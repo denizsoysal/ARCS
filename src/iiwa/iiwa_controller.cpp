@@ -384,7 +384,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		discrete_state->first_run_compute_cycle = FALSE;
 	}else{
 	    // cycle_time = (continuous_state->current_timespec.tv_nsec - continuous_state->prev_timespec.tv_nsec) / 1000000000.0; // This gives strange values, should it be set to a constant
-		cycle_time = 0.1; //100ms
+		// todo fix this method and update in iiwa_virtual as well. 
+		cycle_time = 0.02; //100ms
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
@@ -397,13 +398,12 @@ void iiwa_controller_running_compute(activity_t *activity){
 			break;
 		case APPROACH:
 			cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
-			printf("The command velocity is: %f \n", cmd_vel);
 			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
                 cmd_vel = direction * params->max_jnt_vel[6];
 			}
 			break;
 		case BLEND:
-            alpha = fabs(error) - params->slow_buffer[6] / (params->approach_buffer[6] - params->slow_buffer[6]);
+            alpha = (fabs(error) - params->slow_buffer[6]) / (params->approach_buffer[6] - params->slow_buffer[6]);
 			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
 			break;
 		case SLOW:

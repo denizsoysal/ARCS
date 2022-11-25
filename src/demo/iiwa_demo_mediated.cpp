@@ -33,7 +33,7 @@ bool *deinit_controller;
 double jnt_pos_save[7];
 FILE *fpt, *fpt2;
 double traj_time;
-int thread_time = 100; //ms
+int thread_time = 4; //ms
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -225,7 +225,7 @@ int main(int argc, char**argv){
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", thread_time);
-	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 2*thread_time);
+	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 5*thread_time);
 	create_thread(&thread_mediator, "thread_mediator", 100);
 
 	// Register activities in threads
