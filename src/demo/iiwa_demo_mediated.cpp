@@ -224,7 +224,7 @@ int main(int argc, char**argv){
 	thread_t thread_mediator;
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
-	create_thread(&thread_iiwa, "thread_iiwa", thread_time); // 4 ms
+	create_thread(&thread_iiwa, "thread_iiwa", thread_time);
 	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 2*thread_time);
 	create_thread(&thread_mediator, "thread_mediator", 100);
 
@@ -240,8 +240,8 @@ int main(int argc, char**argv){
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_controller);
-	pthread_create(&pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
-	pthread_create(&pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
+	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
+	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
 	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
 	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_virtual);
 
