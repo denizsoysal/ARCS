@@ -1,0 +1,11 @@
+# Created by gc_stream
+camera.A=[270.63312 0 160.00000; 0 270.63312 120.00000; 0 0 1]
+camera.height=240
+camera.width=320
+camera.exposure_time=0.01571
+camera.gain=0.00000
+rho=43.36179
+t=0.16022
+camera.noise=3.00000
+camera.brightness=0.41000
+camera.out1_reduction=0.00000
