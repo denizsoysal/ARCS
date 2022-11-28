@@ -374,7 +374,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
-	// This was set to long type before but it seems to not work in the computations below (always 0)
 	double cycle_time; // cycle time in second
 	double ftime_prev;
 	double ftime_current;

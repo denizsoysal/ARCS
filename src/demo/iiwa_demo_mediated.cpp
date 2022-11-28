@@ -186,7 +186,6 @@ int main(int argc, char**argv){
 	deinitialisation_request = &virtual_coord_state->deinitialisation_request;
 
 	virtual_params->iiwa_params.cmd_mode = POSITION;
-	virtual_params->thread_time = thread_time; //ms
 
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
 	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;

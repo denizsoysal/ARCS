@@ -30,13 +30,19 @@ typedef struct iiwa_virtual_s{
 // Parameters
 typedef struct iiwa_virtual_params_s{
     iiwa_params_t               iiwa_params;
-    int                         thread_time;
 }iiwa_virtual_params_t;
 
 // Continuous state
 typedef struct iiwa_virtual_continuous_state_s{
     iiwa_state_t              iiwa_state;
+
+    struct timespec prev_timespec;
+    struct timespec current_timespec;
 }iiwa_virtual_continuous_state_t;
+
+typedef struct iiwa_virtual_discrete_state_s{
+    bool first_run_compute_cycle;
+}iiwa_virtual_discrete_state_t;
 
 //! Coordination state
 typedef struct iiwa_virtual_coordination_state_s {
@@ -44,6 +50,8 @@ typedef struct iiwa_virtual_coordination_state_s {
     bool execution_request;
     bool deinitialisation_request;
     bool commanding_not_active;
+    // Compute
+    bool first_run_compute_cycle;
     // Mutex
     pthread_mutex_t sensor_lock, actuation_lock;
 } iiwa_virtual_coordination_state_t;

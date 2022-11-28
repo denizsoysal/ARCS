@@ -243,7 +243,7 @@ void iiwa_virtual_capability_configuration(activity_t *activity){
 
 void iiwa_virtual_pausing_coordinate(activity_t *activity){
 	iiwa_virtual_coordination_state_t *coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
-	iiwa_virtual_continuous_state_t *continuous_state = (iiwa_virtual_continuous_state_t *) activity->state.computational_state.continuous;
+
 	// Coordinating with other activities
 	if (coord_state->execution_request)
 		activity->state.lcsm_protocol = EXECUTION;
@@ -259,6 +259,9 @@ void iiwa_virtual_pausing_coordinate(activity_t *activity){
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
+
+	// set first run compute cycle
+	coord_state->first_run_compute_cycle = TRUE;
 }
 
 void iiwa_virtual_pausing_configure(activity_t *activity){
@@ -326,11 +329,28 @@ void iiwa_virtual_running_compute(activity_t *activity){
 	iiwa_virtual_coordination_state_t *coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
 	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
 
+	// compute the thread time
+    double cycle_time; // cycle time in second
+	double ftime_prev;
+	double ftime_current;
+
+	// compute the current timespec, time difference, and then the previous timespec
+	// TODO move this time tracking into the activity.h data structure
+	timespec_get(&continuous_state->current_timespec, TIME_UTC);
+	if (coord_state->first_run_compute_cycle){
+		cycle_time = 0.0;
+		coord_state->first_run_compute_cycle = FALSE;
+	}else{
+		ftime_prev = continuous_state->prev_timespec.tv_sec + continuous_state->prev_timespec.tv_nsec / 1000000000.0;
+		ftime_current = continuous_state->current_timespec.tv_sec + continuous_state->current_timespec.tv_nsec / 1000000000.0;
+		cycle_time = ftime_current - ftime_prev;
+	}
+	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
 	pthread_mutex_lock(&coord_state->sensor_lock);
     // update the meas_jnt_pos on the iiwa using cmd_jnt_vel
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time/1000.0 * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += cycle_time * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
 	}
 
     // write the current set points to a text file
