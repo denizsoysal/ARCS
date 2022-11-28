@@ -70,7 +70,6 @@ typedef struct iiwa_controller_continuous_state_s{
 //! (computational) discrete state
 typedef struct iiwa_controller_discrete_state_s{
     // flags
-    bool first_run_compute_cycle;
     bool in_contact;
 }iiwa_controller_discrete_state_t;
 
@@ -82,6 +81,9 @@ typedef struct iiwa_controller_coordination_state_s {
     bool commanding_not_active;
     // Mutex
     pthread_mutex_t *sensor_lock, *actuation_lock, goal_lock; //pointers because they will point to the same as the iiwa_activity
+
+    // First run compute cycle
+    bool first_run_compute_cycle;
 } iiwa_controller_coordination_state_t;
 
 extern const iiwa_controller_t ec_iiwa_controller;

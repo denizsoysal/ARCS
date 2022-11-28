@@ -225,7 +225,7 @@ void iiwa_controller_capability_configuration(activity_t *activity){
 //PAUSING
 void iiwa_controller_pausing_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+
 	// Coordinating with other activities
 	if (coord_state->execution_request)
 		activity->state.lcsm_protocol = EXECUTION;
@@ -240,16 +240,13 @@ void iiwa_controller_pausing_coordinate(activity_t *activity){
 			activity->lcsm.state = CAPABILITY_CONFIGURATION;
 			break;
 	}
-	
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
+
+	// iiwa controller first run compute cycle
+	coord_state->first_run_compute_cycle = TRUE;
 }
 
 void iiwa_controller_pausing_configure(activity_t *activity){
-	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
-
-	// Set the first run compute cycle flag
-	discrete_state->first_run_compute_cycle = TRUE;
-
 	if (activity->lcsm.state != PAUSING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -372,7 +369,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
 	double cycle_time; // cycle time in second
 	double ftime_prev;
@@ -385,9 +381,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 	// compute the current timespec, time difference, and then the previous timespec
 	// TODO move this time tracking into the activity.h data structure
 	timespec_get(&continuous_state->current_timespec, TIME_UTC);
-	if (discrete_state->first_run_compute_cycle){
+	if (coord_state->first_run_compute_cycle){
 		cycle_time = 0.0;
-		discrete_state->first_run_compute_cycle = FALSE;
+		coord_state->first_run_compute_cycle = FALSE;
 	}else{
 		ftime_prev = continuous_state->prev_timespec.tv_sec + continuous_state->prev_timespec.tv_nsec / 1000000000.0;
 		ftime_current = continuous_state->current_timespec.tv_sec + continuous_state->current_timespec.tv_nsec / 1000000000.0;
