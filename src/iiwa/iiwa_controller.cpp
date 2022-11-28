@@ -245,6 +245,11 @@ void iiwa_controller_pausing_coordinate(activity_t *activity){
 }
 
 void iiwa_controller_pausing_configure(activity_t *activity){
+	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
+
+	// Set the first run compute cycle flag
+	discrete_state->first_run_compute_cycle = TRUE;
+
 	if (activity->lcsm.state != PAUSING){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
@@ -370,7 +375,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
 	// This was set to long type before but it seems to not work in the computations below (always 0)
-	double cycle_time; // cycle time in secondefined types if operator '>' is overloaded
+	double cycle_time; // cycle time in second
+	double ftime_prev;
+	double ftime_current;
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
@@ -383,9 +390,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 		cycle_time = 0.0;
 		discrete_state->first_run_compute_cycle = FALSE;
 	}else{
-	    // cycle_time = (continuous_state->current_timespec.tv_nsec - continuous_state->prev_timespec.tv_nsec) / 1000000000.0; // This gives strange values, should it be set to a constant
-		// todo fix this method and update in iiwa_virtual as well. 
-		cycle_time = 0.02; //100ms
+		ftime_prev = continuous_state->prev_timespec.tv_sec + continuous_state->prev_timespec.tv_nsec / 1000000000.0;
+		ftime_current = continuous_state->current_timespec.tv_sec + continuous_state->current_timespec.tv_nsec / 1000000000.0;
+		cycle_time = ftime_current - ftime_prev;
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 

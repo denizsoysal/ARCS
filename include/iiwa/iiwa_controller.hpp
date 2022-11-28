@@ -69,9 +69,9 @@ typedef struct iiwa_controller_continuous_state_s{
 
 //! (computational) discrete state
 typedef struct iiwa_controller_discrete_state_s{
-    bool first_run_compute_cycle = TRUE;
-    // flags 
-    bool in_contact = FALSE;
+    // flags
+    bool first_run_compute_cycle;
+    bool in_contact;
 }iiwa_controller_discrete_state_t;
 
 //! Coordination state
@@ -87,7 +87,6 @@ typedef struct iiwa_controller_coordination_state_s {
 extern const iiwa_controller_t ec_iiwa_controller;
 
 // Useful Functions
-// TODO should just declaration be in header?
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
