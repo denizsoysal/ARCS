@@ -17,6 +17,7 @@
 #include <iostream>
 
 FILE *fpt;
+FILE *fpt2;
 /** 
  * The config() has to be scheduled everytime a change in the LCSM occurs, 
  * so it properly configures the schedule for the next iteration according
@@ -225,8 +226,14 @@ void iiwa_virtual_capability_configuration_compute(activity_t *activity){
 				activity->state.lcsm_flags.capability_configuration_complete = true;
 			}
 			else{
-				printf("[ERROR] Commanding mode different, deinitializing \n Virtual only valid for POSITION Mode");
-				activity->state.lcsm_protocol = DEINITIALISATION;
+				if (params->iiwa_params.cmd_mode == WRENCH){
+					printf("Check WRENCH position ok in virtual activity \n");
+					activity->state.lcsm_flags.capability_configuration_complete = true;
+				}
+				else{
+					printf("[ERROR] Commanding mode different, deinitializing \n Virtual only valid for POSITION Mode");
+					activity->state.lcsm_protocol = DEINITIALISATION;
+				}
 			}
 			break;
 		case DEINITIALISATION:
@@ -282,13 +289,32 @@ void iiwa_virtual_running_communicate(activity_t *activity){
 	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
 
     // read the commanded set points
-    pthread_mutex_lock(&coord_state->actuation_lock);
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
+	switch(params->iiwa_params.cmd_mode){
+		case(POSITION):
 		{
-			iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i] = params->iiwa_params.cmd_jnt_vel[i];
+			pthread_mutex_lock(&coord_state->actuation_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
+				{
+					iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i] = params->iiwa_params.cmd_jnt_vel[i];
+				}
+			pthread_mutex_unlock(&coord_state->actuation_lock);
+			break;
 		}
-	pthread_mutex_unlock(&coord_state->actuation_lock);
-
+		case(WRENCH):
+		{
+			pthread_mutex_lock(&coord_state->actuation_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
+			{
+				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i] = params->iiwa_params.cmd_jnt_vel[i];
+			}
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
+			{
+				iiwa_state->iiwa_actuation_input.cmd_wrench[i] = params->iiwa_params.cmd_wrench[i];
+			}
+			pthread_mutex_unlock(&coord_state->actuation_lock);
+			break;
+		}
+	}
 }
 
 void iiwa_virtual_running_coordinate(activity_t *activity){
@@ -326,35 +352,85 @@ void iiwa_virtual_running_compute(activity_t *activity){
 	iiwa_virtual_coordination_state_t *coord_state = (iiwa_virtual_coordination_state_t *) activity->state.coordination_state;
 	iiwa_state_t *iiwa_state = (iiwa_state_t *) &continuous_state->iiwa_state;
 
+	// read the commanded set points
+	switch(params->iiwa_params.cmd_mode){
+		case(POSITION):
+		{
+			pthread_mutex_lock(&coord_state->sensor_lock);
+			// update the meas_jnt_pos on the iiwa using cmd_jnt_vel
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time/1000.0 * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+			}
 
-	pthread_mutex_lock(&coord_state->sensor_lock);
-    // update the meas_jnt_pos on the iiwa using cmd_jnt_vel
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time/1000.0 * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+			// write the current set points to a text file
+			fpt = fopen("meas_jnt_pos.csv", "a+");
+			fprintf(fpt, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f \n", 
+						iiwa_state->iiwa_sensors.meas_jnt_pos[0],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[1],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[2],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[3],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[4],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[5],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[6],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[0],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[1],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[2],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[3],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[4],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[5],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[6]
+						);
+			fclose(fpt);
+
+			pthread_mutex_unlock(&coord_state->sensor_lock);
+			break;
+		}
+		case(WRENCH):
+		{
+			pthread_mutex_lock(&coord_state->sensor_lock);
+			// update the meas_jnt_pos on the iiwa using cmd_jnt_vel
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				iiwa_state->iiwa_sensors.meas_jnt_pos[i] += params->thread_time/1000.0 * iiwa_state->iiwa_actuation_input.cmd_jnt_vel[i];
+			}
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++){
+				// simply assumes that the external torque measured is exactly what we command it to be
+				iiwa_state->iiwa_sensors.meas_ext_torques[i] += iiwa_state->iiwa_actuation_input.cmd_wrench[i];
+			}
+
+			// write the current set points to a text file
+			fpt = fopen("meas_jnt_pos.csv", "a+");
+			fprintf(fpt, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f \n", 
+						iiwa_state->iiwa_sensors.meas_jnt_pos[0],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[1],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[2],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[3],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[4],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[5],
+						iiwa_state->iiwa_sensors.meas_jnt_pos[6],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[0],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[1],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[2],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[3],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[4],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[5],
+						iiwa_state->iiwa_actuation_input.cmd_jnt_vel[6]
+						);
+			fclose(fpt);
+
+			fpt2 = fopen("meas_wrench.csv", "a+");
+			fprintf(fpt2, "%f, %f, %f, %f, %f, %f \n", 
+						iiwa_state->iiwa_sensors.meas_ext_torques[0],
+						iiwa_state->iiwa_sensors.meas_ext_torques[1],
+						iiwa_state->iiwa_sensors.meas_ext_torques[2],
+						iiwa_state->iiwa_sensors.meas_ext_torques[3],
+						iiwa_state->iiwa_sensors.meas_ext_torques[4],
+						iiwa_state->iiwa_sensors.meas_ext_torques[5]
+						);
+			fclose(fpt2);
+			pthread_mutex_unlock(&coord_state->sensor_lock);
+			break;
+		}
 	}
-
-    // write the current set points to a text file
-    fpt = fopen("meas_jnt_pos.csv", "a+");
-	fprintf(fpt, "%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f \n", 
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[0],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[1],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[2],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[3],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[4],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[5],
-	            iiwa_state->iiwa_sensors.meas_jnt_pos[6],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[0],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[1],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[2],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[3],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[4],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[5],
-				iiwa_state->iiwa_actuation_input.cmd_jnt_vel[6]
-				);
-	fclose(fpt);
-
-	pthread_mutex_unlock(&coord_state->sensor_lock);
-
 }
 
 void iiwa_virtual_running(activity_t *activity){

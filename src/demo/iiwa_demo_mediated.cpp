@@ -31,7 +31,7 @@
 bool *deinitialisation_request;
 bool *deinit_controller;
 double jnt_pos_save[7];
-FILE *fpt, *fpt2;
+FILE *fpt, *fpt2,*fpt3;
 double traj_time;
 int thread_time = 4; //ms
 
@@ -123,16 +123,57 @@ void* set_petrinet(void* activity){
 				}
 			}else{
 				*coord_state->board_dirty = true;
-				if (t>8){
-					*coord_state->start_vel_transition = true;
-				}
-				if (t>10){
-					*coord_state->end_vel_transition = true;
-				}
-				if (t>12){
-					*coord_state->contact_detected = true;
-				}
+				// if (t>8){
+				// 	*coord_state->start_vel_transition = true;
+				// }
+				// if (t>10){
+				// 	*coord_state->end_vel_transition = true;
+				// }
+				// if (t>12){
+				// 	*coord_state->contact_detected = true;
+				// }
 			}
+		}
+		t += (double)dt/1000;
+	}
+	return 0;
+}
+
+
+void* set_wrench_actuation(void* activity){
+	activity_t *iiwa_controller = (activity_t*) activity; 
+	iiwa_controller_params_t* params = (iiwa_controller_params_t *) iiwa_controller->conf.params;
+	iiwa_controller_coordination_state_t *coord_state =
+	(iiwa_controller_coordination_state_t *) iiwa_controller->state.coordination_state;  
+
+	int dt = 500; // ms
+	double t = 0;
+	double local_time = 0;
+	
+	while(!(*deinitialisation_request)){
+		usleep(1000*dt);  // time in microseconds
+		if (iiwa_controller->lcsm.state == RUNNING){
+			// Copying data
+			pthread_mutex_lock(&coord_state->goal_lock);
+			params->goal_wrench[0] = 0;
+			params->goal_wrench[1] = 0;
+			params->goal_wrench[2] = 0;
+			params->goal_wrench[3] = 0;
+			params->goal_wrench[4] = 0;
+			if (local_time < 1){
+				params->goal_wrench[5] = 0;
+			}else{
+				params->goal_wrench[5] = 1;
+			}
+
+            fpt3 = fopen("setpoint_wrench.csv", "a+");
+			fprintf(fpt3, " %f, %f \n", t, params->goal_wrench[5]);
+			fclose(fpt3);
+
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			local_time += (double)dt/1000;
+
+			// printf("%f\n", t);
 		}
 		t += (double)dt/1000;
 	}
@@ -185,7 +226,7 @@ int main(int argc, char**argv){
 
 	deinitialisation_request = &virtual_coord_state->deinitialisation_request;
 
-	virtual_params->iiwa_params.cmd_mode = POSITION;
+	virtual_params->iiwa_params.cmd_mode = WRENCH;
 	virtual_params->thread_time = thread_time; //ms
 
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
@@ -218,6 +259,8 @@ int main(int argc, char**argv){
     iiwa_controller_params->slow_buffer[6] = 0.05;
     iiwa_controller_params->goal_buffer[6] = 0.01;
 
+	iiwa_controller_params->max_wrench_step = 0.1;
+
 	// ### THREADS ### //
 	thread_t thread_iiwa;
 	thread_t thread_iiwa_controller;
@@ -236,13 +279,14 @@ int main(int argc, char**argv){
 	// ### SHARED MEMORY ### //
 
 	// Create POSIX threads   
-	pthread_t pthread_iiwa, pthread_actuation, phtread_saving, pthread_iiwa_controller, pthread_mediator, pthread_petrinet;
+	pthread_t pthread_iiwa, pthread_actuation, phtread_saving, pthread_iiwa_controller, pthread_mediator, pthread_petrinet, pthread_wrench_cmd;
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_controller);
 	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
 	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
 	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
+	pthread_create( &pthread_wrench_cmd, NULL, set_wrench_actuation, (void*) &iiwa_controller);
 	// pthread_create( &phtread_saving, NULL, save_sensor_data, (void*) &iiwa_virtual);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
@@ -251,6 +295,7 @@ int main(int argc, char**argv){
 	pthread_join(pthread_iiwa_controller, NULL);
 	pthread_join(pthread_mediator, NULL);
 	pthread_join(pthread_petrinet, NULL);
+	pthread_join(pthread_wrench_cmd, NULL);
 	// pthread_join(phtread_saving, NULL);
 	
 	// Freeing memory

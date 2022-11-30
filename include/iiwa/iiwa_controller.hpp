@@ -36,6 +36,10 @@ typedef struct iiwa_controller_params_s{
     // TODO where do you use global vs local?
     double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 
+    double	goal_wrench[CART_VECTOR_DIM];
+    // TODO where do you use global vs local?
+    double  local_goal_wrench[CART_VECTOR_DIM];
+
     double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     // TODO approach_jnt_vel should be a state
     double  approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
@@ -44,6 +48,8 @@ typedef struct iiwa_controller_params_s{
     double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
     double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
     double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
+
+    double max_wrench_step;
 
     struct iiwa_sensors_s{
 		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
@@ -62,6 +68,8 @@ typedef struct iiwa_controller_continuous_state_s{
 
     double local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double jnt_pos_error[LBRState::NUMBER_OF_JOINTS];
+
+    double local_cmd_wrench[CART_VECTOR_DIM];
 
     struct timespec prev_timespec;
     struct timespec current_timespec;
