@@ -467,14 +467,14 @@ void iiwa_controller_running_compute(activity_t *activity){
 	if (coord_state->first_run_compute_cycle){
 		cycle_time = 0.0;
 		coord_state->first_run_compute_cycle = FALSE;
+		meas_jnt_vel = 0.0;
 	}else{
 		ftime_prev = continuous_state->prev_timespec.tv_sec + continuous_state->prev_timespec.tv_nsec / 1000000000.0;
 		ftime_current = continuous_state->current_timespec.tv_sec + continuous_state->current_timespec.tv_nsec / 1000000000.0;
 		cycle_time = ftime_current - ftime_prev;
+		meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
-
-	meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
 
 	switch(continuous_state->iiwa_controller_state->cmd_mode){
 		case(POSITION):
@@ -560,16 +560,23 @@ void iiwa_controller_running_compute(activity_t *activity){
 				continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
 				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 				// Update the centre point of the spring
+
+				for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
+				{
+					continuous_state->local_cmd_jnt_vel[i] = 0.0;
+					continuous_state->local_cmd_torques[i] = 0.0;
+				}
 				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
 			}
+			break;
 		}
 	}
 }
 
 void iiwa_controller_running(activity_t *activity){
-	printf("The controller state is: %d \n", activity->fsm[0].state);
 	iiwa_controller_running_communicate_read(activity);
 	iiwa_controller_running_coordinate(activity);
+	printf("The controller state is: %d \n", activity->fsm[0].state);
 	iiwa_controller_running_compute(activity);
 	iiwa_controller_running_communicate_write(activity);
 	iiwa_controller_running_configure(activity);
