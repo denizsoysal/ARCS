@@ -548,16 +548,20 @@ void iiwa_controller_running_compute(activity_t *activity){
 			double error = continuous_state->jnt_pos_error[6];
 			int direction = sgn(error); 
 
-			if (fabs(meas_jnt_vel) >0)
-			{
-				params->torque_gain = 0.0;
-				printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
+			if (activity->fsm[0].state != WAIT){
+				if (fabs(meas_jnt_vel) >0.05)
+				{
+					params->torque_gain = 0.0;
+					printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
+				}
+				else{
+					params->torque_gain += 0.001;
+				}
+				continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
+				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
+				// Update the centre point of the spring
+				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
 			}
-			else{
-				params->torque_gain += 0.001;
-			}
-			continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
-			printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 		}
 	}
 }
