@@ -210,7 +210,7 @@ int main(int argc, char**argv){
 	//iiwa_controller_coord_state->execution_request = true; removed because waits for the task coordinator
 
 	// Configure the Controller Parameters
-	iiwa_controller_params->max_jnt_vel[6] = 1;
+	iiwa_controller_params->max_jnt_vel[6] = 0.5;
     iiwa_controller_params->slow_jnt_vel[6] = 0.1;
     iiwa_controller_params->jnt_accel[6] = 1; //10
     iiwa_controller_params->approach_buffer[6] = 0.2;

@@ -316,6 +316,7 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 
 	double error = continuous_state->jnt_pos_error[6];
+	double s;
 	double cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
 
 
@@ -328,12 +329,23 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 			break;
 		case APPROACH:
 		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-				// What to do here;
-				params->approach_jnt_vel[6] = continuous_state->local_cmd_jnt_vel[6];
+				// TODO compute the approach_jnt_acc[i] boundary condition here as well for the blend phase boundary condition
+				//    for now, just set to 0...
+				// TODO why use for loops when you can just use memcpy?
+				memcpy(&continuous_state->approach_jnt_vel, &continuous_state->local_cmd_jnt_vel, sizeof(continuous_state->local_cmd_jnt_vel));
+				continuous_state->approach_jnt_acc[6] = 0;
+
+                // Now "configure" the controller parameters...
+				continuous_state->approach_coeffs[0] = continuous_state->approach_jnt_vel[6];
+				continuous_state->approach_coeffs[1] = continuous_state->approach_jnt_acc[6];
+				continuous_state->approach_coeffs[2] = 3*(params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6]) - 2*continuous_state->approach_jnt_acc[6];
+				continuous_state->approach_coeffs[3] = params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6] - continuous_state->approach_jnt_acc[6] - continuous_state->approach_coeffs[2];
+
                 activity->fsm[0].state = BLEND;
 			}
 			break;
 		case BLEND:
+            s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
 		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
 				activity->fsm[0].state = APPROACH;
 			}else if (fabs(error) < params->slow_buffer[6]){
@@ -376,7 +388,13 @@ void iiwa_controller_running_compute(activity_t *activity){
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
-	double alpha;
+
+    // path variables for blend
+	double s;
+	double a0 = continuous_state->approach_coeffs[0];
+	double a1 = continuous_state->approach_coeffs[1];
+	double a2 = continuous_state->approach_coeffs[2];
+	double a3 = continuous_state->approach_coeffs[3];
 
 	// compute the current timespec, time difference, and then the previous timespec
 	// TODO move this time tracking into the activity.h data structure
@@ -405,8 +423,11 @@ void iiwa_controller_running_compute(activity_t *activity){
 			}
 			break;
 		case BLEND:
-            alpha = (fabs(error) - params->slow_buffer[6]) / (params->approach_buffer[6] - params->slow_buffer[6]);
-			cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (params->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+            s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
+			// cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (continuous_state->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+            cmd_vel = a0 + a1*s + a2*pow(s, 2) + a3*pow(s, 3);
+			printf("%f\n", s);
+			printf("%f, %f, %f, %f\n", a0, a1, a2, a3);
 			break;
 		case SLOW:
 			cmd_vel = params->slow_jnt_vel[6] * direction;
