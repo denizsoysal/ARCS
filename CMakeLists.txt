@@ -98,8 +98,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(STAND_ALONE)
-    add_executable(iiwa_demo_mediated src/demo/iiwa_demo_mediated.cpp)
-    target_link_libraries(iiwa_demo_mediated PRIVATE
+    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
+    target_link_libraries(iiwase_demo PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c
