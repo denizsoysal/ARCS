@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 // AACAL
 #include <five_c/thread/thread.h>
@@ -23,9 +24,6 @@
 #include "iiwa/iiwa_virtual.hpp"
 #include "iiwa/iiwa_controller.hpp"
 #include "task_mediator/task_mediator.hpp"
-
-#include <pthread.h>
-#include <unistd.h>
 
 
 bool *deinitialisation_request;
@@ -254,12 +252,12 @@ int main(int argc, char**argv){
 	// Configure the Controller Parameters
 	iiwa_controller_params->max_jnt_vel[6] = 1;
     iiwa_controller_params->slow_jnt_vel[6] = 0.1;
-    iiwa_controller_params->jnt_accel[6] = 1; //10
+    iiwa_controller_params->max_jnt_accel[6] = 1; //10
     iiwa_controller_params->approach_buffer[6] = 0.2;
     iiwa_controller_params->slow_buffer[6] = 0.05;
     iiwa_controller_params->goal_buffer[6] = 0.01;
 
-	iiwa_controller_params->max_wrench_step = 0.1;
+	iiwa_controller_params->max_wrench_step = 0.01;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;

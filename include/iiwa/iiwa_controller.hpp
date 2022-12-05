@@ -45,6 +45,7 @@ typedef struct iiwa_controller_params_s{
     double  approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
+    double  max_jnt_accel[LBRState::NUMBER_OF_JOINTS];
     double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
     double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
     double  goal_buffer[LBRState::NUMBER_OF_JOINTS];

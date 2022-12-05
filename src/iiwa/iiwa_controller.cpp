@@ -464,7 +464,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(WRENCH):
 		{	
 			//In this mode, we command both the jnt vel (jnt) and the end effector wrench (cart)
-			printf("In wrench control \n");
+			
 			// Problem, we can't read the jnt velocity measurements...
 			// Can we then command it to 0 everytime ? Will it have the wanted behavior? 
 			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
@@ -472,15 +472,55 @@ void iiwa_controller_running_compute(activity_t *activity){
 				//To do: implement an ABAQ controller to ensure a smooth acceleration (through ~continuous wrench)
 				double cmd_wrench;
 				cmd_wrench = (params->local_goal_wrench[i] - params->local_sensors.meas_ext_torques[i]);
+				if (abs(cmd_wrench)<0.02)
+				{
+					cmd_wrench = 0.0;
+				}
 				if (abs(cmd_wrench) > params->max_wrench_step)
 				{
 					cmd_wrench = sgn(cmd_wrench) * params->max_wrench_step;
-				}
+				} 
 				continuous_state->local_cmd_wrench[i] = cmd_wrench;
 			}
+			printf("In wrench control, cmd: %f \n", continuous_state->local_cmd_wrench[5]);
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
-				continuous_state->local_cmd_jnt_vel[i] = 0.0;
+				double cmd_vel;
+				double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[i];
+				double alpha;
+
+				double error = params->local_goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+				int direction = sgn(error); 
+
+				switch (activity->fsm[0].state){
+					case WAIT:
+						cmd_vel = 0.0;
+						break;
+					case APPROACH:
+						params->jnt_accel[i] += direction * 0.1;
+						if (fabs(params->jnt_accel[i]) >= params->max_jnt_accel[i]){
+							params->jnt_accel[i] = params->max_jnt_accel[i];
+						}
+						printf("accel: %f \n", params->jnt_accel[i]);
+						cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
+						if (fabs(cmd_vel) >= params->max_jnt_vel[i]){
+							cmd_vel = direction * params->max_jnt_vel[i];
+						}
+						break;
+					case BLEND:
+						alpha = (fabs(error) - params->slow_buffer[i]) / (params->approach_buffer[i] - params->slow_buffer[i]);
+						cmd_vel = direction * (params->slow_jnt_vel[i] + alpha * (params->approach_jnt_vel[i] - params->slow_jnt_vel[i]));
+						break;
+					case SLOW:
+						cmd_vel = params->slow_jnt_vel[i] * direction;
+						break;
+					case STOP:
+						cmd_vel = 0.0;
+						break;
+				}
+
+				// write the command velocity to the local variable
+				continuous_state->local_cmd_jnt_vel[i] = cmd_vel;
 			}
 			break;
 		}
