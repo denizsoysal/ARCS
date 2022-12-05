@@ -30,7 +30,7 @@
 bool *deinitialisation_request;
 bool *deinit_controller;
 double jnt_pos_save[7];
-FILE *fpt, *fpt2;
+FILE *fpt, *fpt2, *fpt3;
 double traj_time;
 int thread_time = 4; //ms
 
