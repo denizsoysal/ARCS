@@ -217,7 +217,7 @@ int main(int argc, char**argv){
 
 	strcpy(iiwa_activity_params->iiwa_params.fri_ip,"192.168.1.50");
 	iiwa_activity_params->iiwa_params.fri_port = 30100;
-	iiwa_activity_params->iiwa_params.cmd_mode = WRENCH;
+	iiwa_activity_params->iiwa_params.cmd_mode = TORQUE;
 	
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
 	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
