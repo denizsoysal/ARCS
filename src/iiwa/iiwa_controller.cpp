@@ -209,6 +209,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 void iiwa_controller_capability_configuration_compute(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
+	params->torque_gain = 0.0;
 	// TODO bugfix the controller never leaves the capability configuration state
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
@@ -265,6 +266,9 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		state->jnt_pos_prev[i] = params->local_sensors.meas_jnt_pos[i];
+	}
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
@@ -300,6 +304,17 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 			pthread_mutex_unlock(&coord_state->goal_lock);
 			break;
 		}
+		case(TORQUE):
+		{
+			pthread_mutex_lock(&coord_state->goal_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
+				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+				// goal torques to be added later if needed
+			}
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			break;
+		}
 	}
 }
 
@@ -328,6 +343,16 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
 			{
 				state->iiwa_controller_state->cmd_wrench[i] = state->local_cmd_wrench[i];
+			}
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			break;
+		}
+		case(TORQUE):
+		{
+			pthread_mutex_lock(&coord_state->goal_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+				state->iiwa_controller_state->cmd_torques[i] = state->local_cmd_torques[i];
 			}
 			pthread_mutex_unlock(&coord_state->goal_lock);
 			break;
@@ -427,6 +452,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
+	double meas_jnt_vel;
 
     // path variables for blend
 	double s;
@@ -447,6 +473,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		cycle_time = ftime_current - ftime_prev;
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
+
+	meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
 
 	switch(continuous_state->iiwa_controller_state->cmd_mode){
 		case(POSITION):
@@ -497,11 +525,11 @@ void iiwa_controller_running_compute(activity_t *activity){
 				//To do: implement an ABAQ controller to ensure a smooth acceleration (through ~continuous wrench)
 				double cmd_wrench;
 				cmd_wrench = (params->local_goal_wrench[i] - params->local_sensors.meas_ext_torques[i]);
-				if (abs(cmd_wrench)<0.02)
+				if (fabs(cmd_wrench)<0.02)
 				{
 					cmd_wrench = 0.0;
 				}
-				if (abs(cmd_wrench) > params->max_wrench_step)
+				if (fabs(cmd_wrench) > params->max_wrench_step)
 				{
 					cmd_wrench = sgn(cmd_wrench) * params->max_wrench_step;
 				} 
@@ -514,6 +542,22 @@ void iiwa_controller_running_compute(activity_t *activity){
 				continuous_state->local_cmd_jnt_vel[i] = 0;
 			}
 			break;
+		}
+		case(TORQUE):
+		{
+			double error = continuous_state->jnt_pos_error[6];
+			int direction = sgn(error); 
+
+			if (fabs(meas_jnt_vel) >0)
+			{
+				params->torque_gain = 0.0;
+				printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
+			}
+			else{
+				params->torque_gain += 0.001;
+			}
+			continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
+			printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 		}
 	}
 }

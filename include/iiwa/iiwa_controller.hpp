@@ -51,6 +51,8 @@ typedef struct iiwa_controller_params_s{
 
     double max_wrench_step;
 
+    double torque_gain;
+
     struct iiwa_sensors_s{
 		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 		double 			meas_torques[LBRState::NUMBER_OF_JOINTS];
@@ -69,11 +71,14 @@ typedef struct iiwa_controller_continuous_state_s{
     double local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double jnt_pos_error[LBRState::NUMBER_OF_JOINTS];
 
+    double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
+
     double approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double approach_jnt_acc[LBRState::NUMBER_OF_JOINTS];
     double approach_coeffs[4]; // [a0, a1, a2, a3]; a0 + a1*s + a2*s^2 + a3*s^3;
     double local_cmd_wrench[CART_VECTOR_DIM];
 
+    double local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
     struct timespec prev_timespec;
     struct timespec current_timespec;
 }iiwa_controller_continuous_state_t;
