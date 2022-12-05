@@ -549,13 +549,18 @@ void iiwa_controller_running_compute(activity_t *activity){
 			int direction = sgn(error); 
 
 			if (activity->fsm[0].state != WAIT){
-				if (fabs(meas_jnt_vel) >0.05)
+				if (fabs(meas_jnt_vel) >0.2)
 				{
 					params->torque_gain = 0.0;
 					printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
+					printf("We stop actuating \n");
+				}
+				else if (fabs(meas_jnt_vel) >0.05)
+				{
+					printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
 				}
 				else{
-					params->torque_gain += 0.001;
+					params->torque_gain += 0.005;
 				}
 				continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
 				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
