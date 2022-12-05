@@ -36,15 +36,21 @@ typedef struct iiwa_controller_params_s{
     // TODO where do you use global vs local?
     double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 
+    double	goal_wrench[CART_VECTOR_DIM];
+    // TODO where do you use global vs local?
+    double  local_goal_wrench[CART_VECTOR_DIM];
+
     double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
     double  jnt_jerk[LBRState::NUMBER_OF_JOINTS];
+    double  max_jnt_accel[LBRState::NUMBER_OF_JOINTS];
     double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
     double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
     double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
 
-    // todo how to efficiently link data types? Do we need a local copy of everything?
+    double max_wrench_step;
+
     struct iiwa_sensors_s{
 		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
 		double 			meas_torques[LBRState::NUMBER_OF_JOINTS];
@@ -66,6 +72,7 @@ typedef struct iiwa_controller_continuous_state_s{
     double approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double approach_jnt_acc[LBRState::NUMBER_OF_JOINTS];
     double approach_coeffs[4]; // [a0, a1, a2, a3]; a0 + a1*s + a2*s^2 + a3*s^3;
+    double local_cmd_wrench[CART_VECTOR_DIM];
 
     struct timespec prev_timespec;
     struct timespec current_timespec;

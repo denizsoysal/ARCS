@@ -275,12 +275,32 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
 	// Read the goal from OTHER activity 
-	pthread_mutex_lock(&coord_state->goal_lock);
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
-		state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+	switch(state->iiwa_controller_state->cmd_mode){
+		case(POSITION):
+		{
+			pthread_mutex_lock(&coord_state->goal_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
+				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+			}
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			break;
+		}
+		case(WRENCH):
+		{
+			pthread_mutex_lock(&coord_state->goal_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
+				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+			}
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
+			{
+				params->local_goal_wrench[i] = params->goal_wrench[i];
+			}
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			break;
+		}
 	}
-	pthread_mutex_unlock(&coord_state->goal_lock);
 }
 
 void iiwa_controller_running_communicate_write(activity_t *activity){
@@ -289,11 +309,30 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 	
 	// Write the commanded velocity
 	// printf("Command velocity: %f \n", state->local_cmd_jnt_vel[6]);
-	pthread_mutex_lock(coord_state->actuation_lock);
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+	switch(state->iiwa_controller_state->cmd_mode){
+		case(POSITION):
+		{
+			pthread_mutex_lock(coord_state->actuation_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+			}
+			pthread_mutex_unlock(coord_state->actuation_lock);
+			break;
+		}
+		case(WRENCH):
+		{
+			pthread_mutex_lock(&coord_state->goal_lock);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
+			}
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
+			{
+				state->iiwa_controller_state->cmd_wrench[i] = state->local_cmd_wrench[i];
+			}
+			pthread_mutex_unlock(&coord_state->goal_lock);
+			break;
+		}
 	}
-	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
 void iiwa_controller_running_coordinate(activity_t *activity){
@@ -409,36 +448,74 @@ void iiwa_controller_running_compute(activity_t *activity){
 	}
 	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
 
-	double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
-	int direction = sgn(error); 
+	switch(continuous_state->iiwa_controller_state->cmd_mode){
+		case(POSITION):
+		{
+			printf("Controller in POSITION mode \n");
+			double cmd_vel;
+			double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
+			double alpha;
 
-	switch (activity->fsm[0].state){
-		case WAIT:
-			cmd_vel = 0.0;
+			double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
+			int direction = sgn(error); 
+
+			switch (activity->fsm[0].state){
+				case WAIT:
+					cmd_vel = 0.0;
+					break;
+				case APPROACH:
+					cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
+					if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
+						cmd_vel = direction * params->max_jnt_vel[6];
+					}
+					break;
+				case BLEND:
+					s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
+					// cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (continuous_state->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
+					cmd_vel = a0 + a1*s + a2*pow(s, 2) + a3*pow(s, 3);
+					break;
+				case SLOW:
+					cmd_vel = params->slow_jnt_vel[6] * direction;
+					break;
+				case STOP:
+					cmd_vel = 0.0;
+					break;
+				}
+
+			// write the command velocity to the local variable
+			continuous_state->local_cmd_jnt_vel[6] = cmd_vel;
 			break;
-		case APPROACH:
-			cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
-			if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
-                cmd_vel = direction * params->max_jnt_vel[6];
+		}
+		case(WRENCH):
+		{	
+			//In this mode, we command both the jnt vel (jnt) and the end effector wrench (cart)
+			
+			// Problem, we can't read the jnt velocity measurements...
+			// Can we then command it to 0 everytime ? Will it have the wanted behavior? 
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
+			{
+				//To do: implement an ABAQ controller to ensure a smooth acceleration (through ~continuous wrench)
+				double cmd_wrench;
+				cmd_wrench = (params->local_goal_wrench[i] - params->local_sensors.meas_ext_torques[i]);
+				if (abs(cmd_wrench)<0.02)
+				{
+					cmd_wrench = 0.0;
+				}
+				if (abs(cmd_wrench) > params->max_wrench_step)
+				{
+					cmd_wrench = sgn(cmd_wrench) * params->max_wrench_step;
+				} 
+				continuous_state->local_cmd_wrench[i] = cmd_wrench;
+			}
+			printf("In wrench control, cmd: %f \n", continuous_state->local_cmd_wrench[5]);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
+			{
+				// write the command velocity to the local variable
+				continuous_state->local_cmd_jnt_vel[i] = 0;
 			}
 			break;
-		case BLEND:
-            s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
-			// cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (continuous_state->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
-            cmd_vel = a0 + a1*s + a2*pow(s, 2) + a3*pow(s, 3);
-			printf("%f\n", s);
-			printf("%f, %f, %f, %f\n", a0, a1, a2, a3);
-			break;
-		case SLOW:
-			cmd_vel = params->slow_jnt_vel[6] * direction;
-			break;
-		case STOP:
-		    cmd_vel = 0.0;
-			break;
+		}
 	}
-
-    // write the command velocity to the local variable
-	continuous_state->local_cmd_jnt_vel[6] = cmd_vel;
 }
 
 void iiwa_controller_running(activity_t *activity){
