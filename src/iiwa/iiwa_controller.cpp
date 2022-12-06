@@ -236,55 +236,33 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		state->jnt_pos_prev[i] = params->local_sensors.meas_jnt_pos[i];
-	}
+	memcpy(state->jnt_pos_prev, params->local_sensors.meas_jnt_pos, sizeof(params->local_sensors.meas_jnt_pos));
+
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		params->local_sensors.meas_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_torques[i];
-		params->local_sensors.meas_jnt_pos[i] = params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos[i];
-		params->local_sensors.meas_ext_torques[i] = params->iiwa_controller_params->iiwa_sensors.meas_ext_torques[i];
-	}
+	memcpy(params->local_sensors.meas_torques, params->iiwa_controller_params->iiwa_sensors.meas_torques, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_torques));
+	memcpy(params->local_sensors.meas_jnt_pos, params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos));
+    memcpy(params->local_sensors.meas_ext_torques, \
+	    params->iiwa_controller_params->iiwa_sensors.meas_ext_torques, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_ext_torques));
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
-	// Read the goal from OTHER activity 
+    // read goals from other, depending on control mode
+    pthread_mutex_lock(&coord_state->goal_lock);
+
+	memcpy(params->local_goal_jnt_pos, params->goal_jnt_pos, sizeof(params->goal_jnt_pos));
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
+	}
 	switch(state->iiwa_controller_state->cmd_mode){
-		case(POSITION):
-		{
-			pthread_mutex_lock(&coord_state->goal_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
-				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
-			}
-			pthread_mutex_unlock(&coord_state->goal_lock);
-			break;
-		}
+		case(POSITION): break;
 		case(WRENCH):
 		{
-			pthread_mutex_lock(&coord_state->goal_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
-				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
-			}
-			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
-			{
+			for (unsigned int i=0;i<CART_VECTOR_DIM;i++){
 				params->local_goal_wrench[i] = params->goal_wrench[i];
 			}
-			pthread_mutex_unlock(&coord_state->goal_lock);
 			break;
 		}
-		case(TORQUE):
-		{
-			pthread_mutex_lock(&coord_state->goal_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				params->local_goal_jnt_pos[i] = params->goal_jnt_pos[i];
-				state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
-				// goal torques to be added later if needed
-			}
-			pthread_mutex_unlock(&coord_state->goal_lock);
-			break;
-		}
+		case(TORQUE): break;
 	}
 }
 
@@ -292,41 +270,23 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
     iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 	
-	// Write the commanded velocity
-	// printf("Command velocity: %f \n", state->local_cmd_jnt_vel[6]);
+	// Write the motion actuation commands back to the iiwa
+	pthread_mutex_lock(coord_state->actuation_lock);
+	// copy velocity and every case, and extras depending on control mode...
+	memcpy(state->iiwa_controller_state->cmd_jnt_vel, state->local_cmd_jnt_vel, sizeof(state->local_cmd_jnt_vel));
 	switch(state->iiwa_controller_state->cmd_mode){
-		case(POSITION):
-		{
-			pthread_mutex_lock(coord_state->actuation_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
-			}
-			pthread_mutex_unlock(coord_state->actuation_lock);
-			break;
-		}
+		case(POSITION): break;
 		case(WRENCH):
 		{
-			pthread_mutex_lock(&coord_state->goal_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
-			}
-			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
-			{
-				state->iiwa_controller_state->cmd_wrench[i] = state->local_cmd_wrench[i];
-			}
-			pthread_mutex_unlock(&coord_state->goal_lock);
+		    memcpy(state->iiwa_controller_state->cmd_wrench, state->local_cmd_wrench, sizeof(state->local_cmd_wrench));
 			break;
 		}
 		case(TORQUE):
 		{
-			pthread_mutex_lock(&coord_state->goal_lock);
-			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-				state->iiwa_controller_state->cmd_jnt_vel[i] = state->local_cmd_jnt_vel[i];
-				state->iiwa_controller_state->cmd_torques[i] = state->local_cmd_torques[i];
-			}
-			pthread_mutex_unlock(&coord_state->goal_lock);
+			memcpy(state->iiwa_controller_state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
 			break;
 		}
+		pthread_mutex_unlock(coord_state->actuation_lock);
 	}
 }
 
