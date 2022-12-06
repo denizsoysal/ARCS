@@ -39,10 +39,6 @@ void iiwa_controller_config(activity_t *activity){
 			printf("In creation state Controller \n");
 			add_schedule_to_eventloop(&activity->schedule_table, "creation");
 			break;
-		case RESOURCE_CONFIGURATION:
-			printf("In resource configuration state Controller\n");
-			add_schedule_to_eventloop(&activity->schedule_table, "resource_configuration");
-			break;
 		case CAPABILITY_CONFIGURATION:
 			printf("In capability configuration state Controller\n");
 			add_schedule_to_eventloop(&activity->schedule_table, "capability_configuration");
@@ -73,7 +69,7 @@ void iiwa_controller_creation_coordinate(activity_t *activity){
 
 	// Coordinating own activity
 	if (activity->state.lcsm_flags.creation_complete)
-		activity->lcsm.state = RESOURCE_CONFIGURATION;
+		activity->lcsm.state = CAPABILITY_CONFIGURATION;
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 }
 
@@ -124,50 +120,6 @@ void iiwa_controller_cleaning(activity_t *activity){
     iiwa_controller_cleaning_configure(activity);
 }
 
-// Resource configuration
-void iiwa_controller_resource_configuration_coordinate(activity_t *activity){
-	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	// Coordinating with other activities
-	if (coord_state->deinitialisation_request)
-		activity->state.lcsm_protocol = DEINITIALISATION;
-	
-	// Coordinating own activity
-	if (activity->state.lcsm_flags.creation_complete)
-		switch (activity->state.lcsm_protocol){ 
-			case INITIALISATION:
-				activity->lcsm.state = CAPABILITY_CONFIGURATION;
-				break;
-			case EXECUTION:
-				activity->lcsm.state = CAPABILITY_CONFIGURATION;
-				break;
-			case DEINITIALISATION:
-				activity->lcsm.state = CLEANING;
-				break;
-		}
-		update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
-}
-
-void iiwa_controller_resource_configuration_configure(activity_t *activity){
-	if (activity->lcsm.state != RESOURCE_CONFIGURATION){
-		// Update schedule
-		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
-		remove_schedule_from_eventloop(&activity->schedule_table, "resource_configuration");
-		// Update flags for next visit to the resource configuration LCS 
-		activity->state.lcsm_flags.resource_configuration_complete = false;
-	}
-}
-
-//I need to update this function 
-void iiwa_controller_resource_configuration_compute(activity_t *activity){
-	activity->state.lcsm_flags.resource_configuration_complete = true;
-}
-
-void iiwa_controller_resource_configuration(activity_t *activity){
-	iiwa_controller_resource_configuration_compute(activity);
-	iiwa_controller_resource_configuration_coordinate(activity);
-	iiwa_controller_resource_configuration_configure(activity);
-}
-
 // capability configuration
 void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
@@ -185,7 +137,7 @@ void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
 				activity->lcsm.state = RUNNING;
 				break;
 			case DEINITIALISATION:
-				activity->lcsm.state = RESOURCE_CONFIGURATION;
+				activity->lcsm.state = CLEANING;
 				break;
 		}
 		update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
@@ -392,7 +344,7 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 
 	switch (activity->state.lcsm_protocol){ 
 		case DEINITIALISATION:
-			activity->lcsm.state = RESOURCE_CONFIGURATION;
+			activity->lcsm.state = CAPABILITY_CONFIGURATION;
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
@@ -618,11 +570,6 @@ void iiwa_controller_register_schedules(activity_t *activity){
     register_function(&schedule_creation, (function_ptr_t) iiwa_controller_creation, 
         activity, "creation");
     register_schedule(&activity->schedule_table, schedule_creation, "creation");
-
-    schedule_t schedule_resource_config = {.number_of_functions = 0};
-    register_function(&schedule_resource_config, (function_ptr_t) iiwa_controller_resource_configuration, 
-        activity, "resource_configuration");
-    register_schedule(&activity->schedule_table, schedule_resource_config, "resource_configuration");
 
 	schedule_t schedule_capability_config = {.number_of_functions = 0};
     register_function(&schedule_capability_config, (function_ptr_t) iiwa_controller_capability_configuration, 
