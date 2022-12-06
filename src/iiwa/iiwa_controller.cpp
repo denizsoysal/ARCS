@@ -159,12 +159,7 @@ void iiwa_controller_resource_configuration_configure(activity_t *activity){
 
 //I need to update this function 
 void iiwa_controller_resource_configuration_compute(activity_t *activity){
-	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-
 	activity->state.lcsm_flags.resource_configuration_complete = true;
-
-	// TODO Update this
-	activity->fsm[0].state = WAIT;
 }
 
 void iiwa_controller_resource_configuration(activity_t *activity){
@@ -198,19 +193,41 @@ void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
 }
 
 void iiwa_controller_capability_configuration_configure(activity_t *activity){
+	iiwa_controller_params_t *params = (iiwa_controller_params_t *) activity->conf.params;
+	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+
 	if (activity->lcsm.state != CAPABILITY_CONFIGURATION){
 		// Update schedule
 		add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
 		remove_schedule_from_eventloop(&activity->schedule_table, "capability_configuration");
 		// Update flags for next visit to the capability configuration LCS 
 		activity->state.lcsm_flags.capability_configuration_complete = false;
+
+		// Configure controller for running state
+	    params->torque_gain = 0.0;
+
+		// Configure ABAG Controller
+		params->abag_params.sat_high = 1;
+		params->abag_params.sat_low = -1;
+
+        // parameters from paper
+		params->abag_params.alpha = 0.75;
+		params->abag_params.bias_thresh = 0.75;
+		params->abag_params.delta_bias = 0.001;
+		params->abag_params.gain_thresh = 0.5;
+		params->abag_params.delta_gain = 0.001;
+		
+		// ABAG states need to be initialized to 0
+		cts_state->abag_state.bias = 0.0;
+		cts_state->abag_state.gain = 0.0;
+		cts_state->abag_state.control = 0.0;
+		cts_state->abag_state.ek_bar = 0.0;
 	}
 }
 
 void iiwa_controller_capability_configuration_compute(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
-	params->torque_gain = 0.0;
-	// TODO bugfix the controller never leaves the capability configuration state
+
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
@@ -245,6 +262,7 @@ void iiwa_controller_pausing_coordinate(activity_t *activity){
 
 	// iiwa controller first run compute cycle
 	coord_state->first_run_compute_cycle = TRUE;
+    activity->fsm[0].state = WAIT;
 }
 
 void iiwa_controller_pausing_configure(activity_t *activity){
@@ -393,17 +411,16 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 			break;
 		case APPROACH:
 		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-				// TODO compute the approach_jnt_acc[i] boundary condition here as well for the blend phase boundary condition
-				//    for now, just set to 0...
-				// TODO why use for loops when you can just use memcpy?
 				memcpy(&continuous_state->approach_jnt_vel, &continuous_state->local_cmd_jnt_vel, sizeof(continuous_state->local_cmd_jnt_vel));
 				continuous_state->approach_jnt_acc[6] = 0;
 
                 // Now "configure" the controller parameters...
+				/*
 				continuous_state->approach_coeffs[0] = continuous_state->approach_jnt_vel[6];
 				continuous_state->approach_coeffs[1] = continuous_state->approach_jnt_acc[6];
 				continuous_state->approach_coeffs[2] = 3*(params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6]) - 2*continuous_state->approach_jnt_acc[6];
 				continuous_state->approach_coeffs[3] = params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6] - continuous_state->approach_jnt_acc[6] - continuous_state->approach_coeffs[2];
+				*/
 
                 activity->fsm[0].state = BLEND;
 			}
@@ -447,39 +464,35 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
 	double cycle_time; // cycle time in second
-	double ftime_prev;
-	double ftime_current;
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 	double meas_jnt_vel;
 
+    /*
     // path variables for blend
 	double s;
 	double a0 = continuous_state->approach_coeffs[0];
 	double a1 = continuous_state->approach_coeffs[1];
 	double a2 = continuous_state->approach_coeffs[2];
 	double a3 = continuous_state->approach_coeffs[3];
+	*/
 
-	// compute the current timespec, time difference, and then the previous timespec
-	// TODO move this time tracking into the activity.h data structure
-	timespec_get(&continuous_state->current_timespec, TIME_UTC);
 	if (coord_state->first_run_compute_cycle){
 		cycle_time = 0.0;
-		coord_state->first_run_compute_cycle = FALSE;
 		meas_jnt_vel = 0.0;
+		coord_state->first_run_compute_cycle = FALSE;
+		get_cycle_time(&continuous_state->prev_timespec, &continuous_state->current_timespec);
 	}else{
-		ftime_prev = continuous_state->prev_timespec.tv_sec + continuous_state->prev_timespec.tv_nsec / 1000000000.0;
-		ftime_current = continuous_state->current_timespec.tv_sec + continuous_state->current_timespec.tv_nsec / 1000000000.0;
-		cycle_time = ftime_current - ftime_prev;
+		cycle_time = get_cycle_time(&continuous_state->prev_timespec, &continuous_state->current_timespec);
 		meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
 	}
-	memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec, sizeof(continuous_state->current_timespec));
-
+	
 	switch(continuous_state->iiwa_controller_state->cmd_mode){
 		case(POSITION):
 		{
-			printf("Controller in POSITION mode \n");
+			// relevant for defining velocity zones
+			/*printf("Controller in POSITION mode \n");
 			double cmd_vel;
 			double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 			double alpha;
@@ -511,7 +524,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 				}
 
 			// write the command velocity to the local variable
-			continuous_state->local_cmd_jnt_vel[6] = cmd_vel;
+			continuous_state->local_cmd_jnt_vel[6] = cmd_vel;*/
 			break;
 		}
 		case(WRENCH):
@@ -545,10 +558,12 @@ void iiwa_controller_running_compute(activity_t *activity){
 		}
 		case(TORQUE):
 		{
+			// compute distance and direction vector (don't need dot products since we only have 1 axis)
 			double error = continuous_state->jnt_pos_error[6];
 			int direction = sgn(error); 
 
 			if (activity->fsm[0].state != WAIT){
+                /*
 				if (fabs(meas_jnt_vel) >0.2)
 				{
 					params->torque_gain = 0.0;
@@ -562,9 +577,11 @@ void iiwa_controller_running_compute(activity_t *activity){
 				else{
 					params->torque_gain += 0.005;
 				}
-				continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
-				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
-				// Update the centre point of the spring
+				*/
+
+				// local cmd torque = max_torque * control E [-1, 1]
+				abag(&params->abag_params, &continuous_state->abag_state, meas_jnt_vel, 0.1);
+                continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
 
 				for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 				{
@@ -572,6 +589,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 					continuous_state->local_cmd_torques[i] = 0.0;
 				}
 				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
+				continuous_state->local_cmd_torques[6] = params->torque_gain * direction;
+			    printf("The velocity is: %f \n", meas_jnt_vel);
+				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 			}
 			break;
 		}
@@ -653,3 +673,90 @@ const iiwa_controller_t ec_iiwa_controller ={
     .resource_configure_lcsm = iiwa_controller_resource_configure_lcsm,
     .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };
+
+// double *cubic_vel_traj_1d(double vel1, double acc1, double vel2, double acc2, double duration){
+// 	// double coeff[4];
+// 	// double T[4] = {1.0, pow(duration, 1), pow(duration, 2), pow(duration, 3)};
+
+// 	// coeff[0] = vel1;
+//     // coeff[1] = acc1;
+//     // coeff[2] = (-3.0*vel1 + 3.0*vel2 - 2.0*acc1*T[1] - acc2*T[1]) / T[2];
+//     // coeff[3] = (2.0*vel1 - 2.0*vel2 + acc1*T[1] + acc2*T[1]) / T[3];
+
+//     // // cannot return an address to a local variable
+// 	// return coeff;
+// }
+
+// double acc_setpoint(double velk, double acck, double veld, double converge_distance, double cycle_time){
+//     // double *traj_coeffs;
+// 	// double traj_duration;
+// 	// double accd;
+
+// 	// // If moving at constant velk, compute time to move converge_distance
+// 	// traj_duration = converge_distance / velk;
+
+// 	// if (traj_duration < 2*cycle_time){
+// 	// 	// raise error; trying to converge much faster than controller cycle time
+// 	// }
+
+// 	// traj_coeffs = cubic_vel_traj_1d(velk, acck, veld, 0, traj_duration);
+
+// 	// // compute what the acceleration should be at the next timestep
+// 	// accd = traj_coeffs[1] + 2*traj_coeffs[2]*cycle_time + 3*traj_coeffs[3]*pow(cycle_time, 2);
+	
+// 	// return accd;
+// }
+
+void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val){
+	// parameters as defined in paper
+	double ek_bar = state->ek_bar;
+	double alpha = params->alpha;
+
+	double bk = state->bias;
+	double delta_b = params->delta_bias;
+	double eb = params->bias_thresh;
+	
+	double gk = state->gain;
+	double delta_g = params->delta_gain;
+	double eg = params->gain_thresh;
+
+    double uk = state->control;
+
+	ek_bar = alpha * ek_bar + (1 - alpha) * sgn(setpoint - val);
+	bk = saturate(bk + delta_b * hside(fabs(ek_bar)-eb) * sgn(ek_bar-eb), params->sat_low, params->sat_high);
+	gk = saturate(gk + delta_g * sgn(fabs(ek_bar) - eg), params->sat_low, params->sat_high);
+	uk = saturate(bk + gk * sgn(setpoint - val), params->sat_low, params->sat_high);
+
+	return;
+}
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+template <typename T> int hside(T val){
+    return (val > T(0));
+}
+
+template <typename T> T saturate(T val, T sat_low, T sat_high){
+    if (val > sat_high){
+		val = sat_high;
+	}else if(val < sat_low){
+		val = sat_low;
+	}
+    return val;
+}
+
+double get_cycle_time(struct timespec *prev_timespec, struct timespec *current_timespec){
+    double cycle_time; // cycle time in second
+	double ftime_prev;
+	double ftime_current;
+
+	timespec_get(current_timespec, TIME_UTC);
+	ftime_prev = prev_timespec->tv_sec + prev_timespec->tv_nsec / 1000000000.0;
+	ftime_current = current_timespec->tv_sec + current_timespec->tv_nsec / 1000000000.0;
+	cycle_time = ftime_current - ftime_prev;
+	memcpy(prev_timespec, current_timespec, sizeof(current_timespec));
+
+	return cycle_time;
+}
