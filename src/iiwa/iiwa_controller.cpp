@@ -157,6 +157,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 		// Configure controller for running state
 	    params->torque_gain = 0.0;
+		params->max_torque = 2.0;
 
 		// Configure ABAG Controller
 		params->abag_params.sat_high = 1;
