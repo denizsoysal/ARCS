@@ -615,24 +615,15 @@ const iiwa_controller_t ec_iiwa_controller ={
 // }
 
 void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val){
-	// parameters as defined in paper
-	double ek_bar = state->ek_bar;
-	double alpha = params->alpha;
-
-	double bk = state->bias;
-	double delta_b = params->delta_bias;
-	double eb = params->bias_thresh;
-	
-	double gk = state->gain;
-	double delta_g = params->delta_gain;
-	double eg = params->gain_thresh;
-
-    double uk = state->control;
-
-	ek_bar = alpha * ek_bar + (1 - alpha) * sgn(setpoint - val);
-	bk = saturate(bk + delta_b * hside(fabs(ek_bar)-eb) * sgn(ek_bar-eb), params->sat_low, params->sat_high);
-	gk = saturate(gk + delta_g * sgn(fabs(ek_bar) - eg), params->sat_low, params->sat_high);
-	uk = saturate(bk + gk * sgn(setpoint - val), params->sat_low, params->sat_high);
+	state->ek_bar = params->alpha * state->ek_bar + (1 - params->alpha) * sgn(setpoint - val);
+	state->bias = saturate(state->bias + 
+	    params->delta_bias * hside(fabs(state->ek_bar)-params->bias_thresh) * sgn(state->ek_bar-params->bias_thresh), 
+		params->sat_low, params->sat_high);
+	state->gain = saturate(state->gain + 
+	    params->delta_gain * sgn(fabs(state->ek_bar) - params->gain_thresh), 
+		params->sat_low, params->sat_high);
+	state->control = saturate(state->bias + state->gain * sgn(setpoint - val), 
+	    params->sat_low, params->sat_high);
 
 	return;
 }

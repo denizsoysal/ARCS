@@ -47,10 +47,10 @@ typedef struct abag_params_s{
 typedef struct abag_state_s{
     double ek_bar;
     // Note bias and gain are both params and states
-    double bias;
-    double gain;
+    double bias; //bk
+    double gain; //gk
     
-    double control;
+    double control; //uk
 }abag_state_t;
 
 // Parameters
