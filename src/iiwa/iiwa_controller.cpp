@@ -249,7 +249,6 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 
     // read goals from other, depending on control mode
     pthread_mutex_lock(&coord_state->goal_lock);
-
 	memcpy(params->local_goal_jnt_pos, params->goal_jnt_pos, sizeof(params->goal_jnt_pos));
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
@@ -265,6 +264,7 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 		}
 		case(TORQUE): break;
 	}
+    pthread_mutex_unlock(&coord_state->goal_lock);
 }
 
 void iiwa_controller_running_communicate_write(activity_t *activity){
@@ -287,8 +287,8 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 			memcpy(state->iiwa_controller_state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
 			break;
 		}
-		pthread_mutex_unlock(coord_state->actuation_lock);
 	}
+	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
 void iiwa_controller_running_coordinate(activity_t *activity){
