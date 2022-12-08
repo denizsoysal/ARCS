@@ -215,19 +215,21 @@ int main(int argc, char**argv){
 
 	deinit_logger = &data_logger_coord_state->deinitialisation_request;
 
-    // Share Memory
+    // Share memory iiwa <--> controller
 	iiwa_controller_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
 	iiwa_controller_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
-	
+
+    // Share Sensors and Actuators between controller and iiwa
+	// TODO
+
+	// Share memory data_logger <--> iiwa
 	data_logger_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
 	data_logger_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
-	data_logger_coord_state->goal_lock = &iiwa_controller_coord_state->goal_lock;
-
-	iiwa_controller_params->iiwa_controller_params = &iiwa_activity_continuous_state->iiwa_state;
-	iiwa_controller_continuous_state->iiwa_controller_state = &iiwa_activity_params->iiwa_params;
-
-	data_logger_state->controller_continuous_state = iiwa_controller_continuous_state;
 	data_logger_state->iiwa_continuous_state = iiwa_activity_continuous_state;
+
+	// Share memory data_logger <--> controller
+	data_logger_coord_state->goal_lock = &iiwa_controller_coord_state->goal_lock;
+	data_logger_state->controller_continuous_state = iiwa_controller_continuous_state;
 
 	// Task <-> Controller  
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;

@@ -29,6 +29,7 @@ typedef struct iiwa_controller_s{
 	void (*destroy_lcsm)(activity_t*);
 }iiwa_controller_t; 
 
+// Implement ABAG controller
 typedef struct abag_params_s{
     double alpha; // "memory" parameter [0,1], the larger, the slower the exp. avg. responds.
 
@@ -46,24 +47,23 @@ typedef struct abag_params_s{
 
 typedef struct abag_state_s{
     double ek_bar;
-    // Note bias and gain are both params and states
+    // Note bias and gain are states which can be initialized as params to some value
     double bias; //bk
     double gain; //gk
-    
     double control; //uk
 }abag_state_t;
 
-// Parameters
+// Parameters that configure the behaviour of the controller, like gains, motion spec, etc
 typedef struct iiwa_controller_params_s{
-    iiwa_state_t *iiwa_controller_params;
+    EClientCommandMode cmd_mode;
+    
     double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    // TODO where do you use global vs local?
-    double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-
     double	goal_wrench[CART_VECTOR_DIM];
-    // TODO where do you use global vs local?
+
+    double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
     double  local_goal_wrench[CART_VECTOR_DIM];
 
+    // parameters which affect the motion specification
     double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
@@ -74,41 +74,54 @@ typedef struct iiwa_controller_params_s{
     double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
 
     double max_wrench_step;
-    
+
+    // parameter for bounding the capability of the controller
     double max_torque;
-
-    double torque_gain;
-
-    struct iiwa_sensors_s{
-		double 			meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-		double 			meas_torques[LBRState::NUMBER_OF_JOINTS];
-		double 			meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
-	}local_sensors;
 
     abag_params_t abag_params;
 }iiwa_controller_params_t;
 
-// Continuous state
+// Continuous state which is the state of the controller system, including input and output signals
 typedef struct iiwa_controller_continuous_state_s{
-    // TODO we should write our own data structures here because:
-    //  - we make it more independent of iiwa_interface and general to different robots
-    //  - we remove extra fiels from this struct that we don't use, like fri_port, etc...
-    iiwa_params_t *iiwa_controller_state;
+    // TODO make pointers here and copy them 
+    // Input signals from arm sensors
+    double 	*meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+    double 	*meas_torques[LBRState::NUMBER_OF_JOINTS];
+	double 	*meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
 
-    double local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    double jnt_pos_error[LBRState::NUMBER_OF_JOINTS];
+    // Output signals to iiwa
+	struct iiwa_controller_output_s{
+		double 			cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+		double 			cmd_torques[LBRState::NUMBER_OF_JOINTS];
+		double 			cmd_wrench[CART_VECTOR_DIM];
+	}*iiwa_controller_output;
 
+	double	cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+	double	*cmd_torques[LBRState::NUMBER_OF_JOINTS];
+	double	*cmd_wrench[CART_VECTOR_DIM];
+
+    // Local copies of inputs and outputs
+    double  local_meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
+    double  local_meas_torques[LBRState::NUMBER_OF_JOINTS];
+	double  local_meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
+	double	local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+	double	local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
+	double	local_cmd_wrench[CART_VECTOR_DIM];
+	
+    // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
+    double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 
     double approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double approach_jnt_acc[LBRState::NUMBER_OF_JOINTS];
     double approach_coeffs[4]; // [a0, a1, a2, a3]; a0 + a1*s + a2*s^2 + a3*s^3;
-    double local_cmd_wrench[CART_VECTOR_DIM];
 
-    double local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
+    // Data structures for time
     struct timespec prev_timespec;
     struct timespec current_timespec;
+    long cycle_time_us; //cycle time in microseconds
 
+    // Data structures for control algorithms
     abag_state_t abag_state;
 }iiwa_controller_continuous_state_t;
 
@@ -124,8 +137,9 @@ typedef struct iiwa_controller_coordination_state_s {
     bool execution_request;
     bool deinitialisation_request;
     bool commanding_not_active;
+
     // Mutex
-    pthread_mutex_t *sensor_lock, *actuation_lock, goal_lock; //pointers because they will point to the same as the iiwa_activity
+    pthread_mutex_t *sensor_lock, *actuation_lock, goal_lock;
 
     // First run compute cycle
     bool first_run_compute_cycle;
@@ -133,9 +147,13 @@ typedef struct iiwa_controller_coordination_state_s {
 
 extern const iiwa_controller_t ec_iiwa_controller;
 
-// Useful Functions
+// sgn function {+1, -1}
 template <typename T> int sgn(T val);
+
+// heaviside function
 template <typename T> int hside(T val);
+
+// saturation function [sat_low, sat+high]
 template <typename T> T saturate(T val, T sat_low, T sat_high);
     
 /**
@@ -146,19 +164,6 @@ template <typename T> T saturate(T val, T sat_low, T sat_high);
  * @return the time difference in microseconds from current-previous. 
 */   
 long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec);
-
-double *cubic_vel_traj_1d(double vel1, double acc1, double vel2, double acc2, double duration);
-
-/**
- * Compute the acceleration setpoint to converge smoothly to desired velocity in a specified distance,
- * given the current velocity and acceleration. 
- * 
- * @param veld desired velocity
- * @param converge_distance "radius" from current position travelled before velk=veld
- * @param cycle_time of the controller, s
- * @return accd desired acceleration setpoint
-*/
-double acc_setpoint(double velk, double acck, double veld, double converge_distance, double cycle_time);
 
 /**
  * ABAG Controller, implementation similar to:

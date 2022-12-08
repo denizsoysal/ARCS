@@ -156,7 +156,6 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		activity->state.lcsm_flags.capability_configuration_complete = false;
 
 		// Configure controller for running state
-	    params->torque_gain = 0.0;
 		params->max_torque = 2.0;
 
 		// Configure ABAG Controller
@@ -237,29 +236,24 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
-	memcpy(state->jnt_pos_prev, params->local_sensors.meas_jnt_pos, sizeof(params->local_sensors.meas_jnt_pos));
+    // cache the previous values of vars
+	memcpy(state->jnt_pos_prev, state->local_meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
 
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
-	memcpy(params->local_sensors.meas_torques, params->iiwa_controller_params->iiwa_sensors.meas_torques, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_torques));
-	memcpy(params->local_sensors.meas_jnt_pos, params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_jnt_pos));
-    memcpy(params->local_sensors.meas_ext_torques, \
-	    params->iiwa_controller_params->iiwa_sensors.meas_ext_torques, sizeof(params->iiwa_controller_params->iiwa_sensors.meas_ext_torques));
+	memcpy(state->local_meas_torques, state->meas_torques, sizeof(state->meas_torques));
+	memcpy(state->local_meas_jnt_pos, state->meas_jnt_pos, sizeof(state->meas_jnt_pos));
+    memcpy(state->local_meas_ext_torques, state->meas_ext_torques, sizeof(state->meas_ext_torques));
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
     // read goals from other, depending on control mode
     pthread_mutex_lock(&coord_state->goal_lock);
 	memcpy(params->local_goal_jnt_pos, params->goal_jnt_pos, sizeof(params->goal_jnt_pos));
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		state->jnt_pos_error[i] = params->goal_jnt_pos[i] - params->local_sensors.meas_jnt_pos[i];
-	}
-	switch(state->iiwa_controller_state->cmd_mode){
+	switch(params->cmd_mode){
 		case(POSITION): break;
 		case(WRENCH):
 		{
-			for (unsigned int i=0;i<CART_VECTOR_DIM;i++){
-				params->local_goal_wrench[i] = params->goal_wrench[i];
-			}
+			memcpy(params->local_goal_wrench, params->goal_wrench, sizeof(params->goal_wrench));
 			break;
 		}
 		case(TORQUE): break;
@@ -274,9 +268,9 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 	// Write the motion actuation commands back to the iiwa
 	pthread_mutex_lock(coord_state->actuation_lock);
 	// copy everything in every case, and relevant params will be set to 0
-	memcpy(state->iiwa_controller_state->cmd_jnt_vel, state->local_cmd_jnt_vel, sizeof(state->local_cmd_jnt_vel));
-	memcpy(state->iiwa_controller_state->cmd_wrench, state->local_cmd_wrench, sizeof(state->local_cmd_wrench));
-	memcpy(state->iiwa_controller_state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
+	memcpy(state->cmd_jnt_vel, state->local_cmd_jnt_vel, sizeof(state->local_cmd_jnt_vel));
+	memcpy(state->cmd_wrench, state->local_cmd_wrench, sizeof(state->local_cmd_wrench));
+	memcpy(state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
 	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
@@ -299,52 +293,47 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
 
-	double error = continuous_state->jnt_pos_error[6];
-	double s;
-	double cmd_vel = continuous_state->iiwa_controller_state->cmd_jnt_vel[6];
-
-
 	// FSM TRANSITIONS
-	switch (activity->fsm[0].state){
-		case WAIT:
-		    if (fabs(error) > params->goal_buffer[6]){
-				activity->fsm[0].state = APPROACH;
-			}
-			break;
-		case APPROACH:
-		    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-				memcpy(&continuous_state->approach_jnt_vel, &continuous_state->local_cmd_jnt_vel, sizeof(continuous_state->local_cmd_jnt_vel));
-				continuous_state->approach_jnt_acc[6] = 0;
+	// switch (activity->fsm[0].state){
+	// 	case WAIT:
+	// 	    if (fabs(error) > params->goal_buffer[6]){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}
+	// 		break;
+	// 	case APPROACH:
+	// 	    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
+	// 			memcpy(&continuous_state->approach_jnt_vel, &continuous_state->local_cmd_jnt_vel, sizeof(continuous_state->local_cmd_jnt_vel));
+	// 			continuous_state->approach_jnt_acc[6] = 0;
 
-                // Now "configure" the controller parameters...
-				/*
-				continuous_state->approach_coeffs[0] = continuous_state->approach_jnt_vel[6];
-				continuous_state->approach_coeffs[1] = continuous_state->approach_jnt_acc[6];
-				continuous_state->approach_coeffs[2] = 3*(params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6]) - 2*continuous_state->approach_jnt_acc[6];
-				continuous_state->approach_coeffs[3] = params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6] - continuous_state->approach_jnt_acc[6] - continuous_state->approach_coeffs[2];
-				*/
+    //             // Now "configure" the controller parameters...
+	// 			/*
+	// 			continuous_state->approach_coeffs[0] = continuous_state->approach_jnt_vel[6];
+	// 			continuous_state->approach_coeffs[1] = continuous_state->approach_jnt_acc[6];
+	// 			continuous_state->approach_coeffs[2] = 3*(params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6]) - 2*continuous_state->approach_jnt_acc[6];
+	// 			continuous_state->approach_coeffs[3] = params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6] - continuous_state->approach_jnt_acc[6] - continuous_state->approach_coeffs[2];
+	// 			*/
 
-                activity->fsm[0].state = BLEND;
-			}
-			break;
-		case BLEND:
-            s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
-		    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->slow_buffer[6]){
-                activity->fsm[0].state = SLOW;
-			}
-			break;
-		case SLOW:
-		    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
-				activity->fsm[0].state = APPROACH;
-			}else if (fabs(error) < params->goal_buffer[6]){
-				activity->fsm[0].state = STOP;
-			}
-			break;
-		case STOP:
-		    break;
-	}
+    //             activity->fsm[0].state = BLEND;
+	// 		}
+	// 		break;
+	// 	case BLEND:
+    //         s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
+	// 	    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}else if (fabs(error) < params->slow_buffer[6]){
+    //             activity->fsm[0].state = SLOW;
+	// 		}
+	// 		break;
+	// 	case SLOW:
+	// 	    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
+	// 			activity->fsm[0].state = APPROACH;
+	// 		}else if (fabs(error) < params->goal_buffer[6]){
+	// 			activity->fsm[0].state = STOP;
+	// 		}
+	// 		break;
+	// 	case STOP:
+	// 	    break;
+	// }
 
 	//printf("The controller state is: %d \n", activity->fsm[0].state);
 }
@@ -365,11 +354,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
-	double cycle_time; // cycle time in second
-
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
-	double meas_jnt_vel;
 
     /*
     // path variables for blend
@@ -383,20 +369,24 @@ void iiwa_controller_running_compute(activity_t *activity){
 	if (coord_state->first_run_compute_cycle){
 		coord_state->first_run_compute_cycle = FALSE;
 		timespec_get(&continuous_state->current_timespec, TIME_UTC);
-		cycle_time = 0.0;
+		continuous_state->cycle_time_us = 0;
 		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
 		    sizeof(continuous_state->current_timespec));
-		meas_jnt_vel = 0.0;
 	}else{
 		timespec_get(&continuous_state->current_timespec, TIME_UTC);
-		cycle_time = (double) difftimespec_us(&continuous_state->current_timespec, 
-		    &continuous_state->prev_timespec) / 1000000.0;
+		continuous_state->cycle_time_us = difftimespec_us(&continuous_state->current_timespec, 
+		    &continuous_state->prev_timespec);
 		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
 		    sizeof(continuous_state->current_timespec));
-		meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
+	}
+
+	// compute the joint velocities
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
+		    (double) continuous_state->cycle_time_us / 1000000);
 	}
 	
-	switch(continuous_state->iiwa_controller_state->cmd_mode){
+	switch(params->cmd_mode){
 		case(POSITION):
 		{
 			// relevant for defining velocity zones
@@ -438,14 +428,12 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(WRENCH):
 		{	
 			//In this mode, we command both the jnt vel (jnt) and the end effector wrench (cart)
-			
-			// Problem, we can't read the jnt velocity measurements...
 			// Can we then command it to 0 everytime ? Will it have the wanted behavior? 
 			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
 			{
 				//To do: implement an ABAQ controller to ensure a smooth acceleration (through ~continuous wrench)
 				double cmd_wrench;
-				cmd_wrench = (params->local_goal_wrench[i] - params->local_sensors.meas_ext_torques[i]);
+				cmd_wrench = (params->local_goal_wrench[i] - continuous_state->local_meas_ext_torques[i]);
 				if (fabs(cmd_wrench)<0.02)
 				{
 					cmd_wrench = 0.0;
@@ -466,36 +454,16 @@ void iiwa_controller_running_compute(activity_t *activity){
 		}
 		case(TORQUE):
 		{
-			// compute distance and direction vector (don't need dot products since we only have 1 axis)
-			double error = continuous_state->jnt_pos_error[6];
-			int direction = sgn(error); 
-
 			if (activity->fsm[0].state != WAIT){
-                /*
-				if (fabs(meas_jnt_vel) >0.2)
-				{
-					params->torque_gain = 0.0;
-					printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
-					printf("We stop actuating \n");
-				}
-				else if (fabs(meas_jnt_vel) >0.05)
-				{
-					printf("A motion was sensed, the velocity is: %f \n", meas_jnt_vel);
-				}
-				else{
-					params->torque_gain += 0.005;
-				}
-				*/
-
 				// local cmd torque = max_torque * control E [-1, 1]
-				abag(&params->abag_params, &continuous_state->abag_state, 0.1, meas_jnt_vel);
+				abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->meas_jnt_vel[6]);
 
-				for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
+		        for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 				{
 					continuous_state->local_cmd_jnt_vel[i] = 0.0;
 					continuous_state->local_cmd_torques[i] = 0.0;
 				}
-				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
+				continuous_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
                 continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
 				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 			}
@@ -649,4 +617,13 @@ long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_ti
 	difftimespec_us =  (long) diff_s * 1000000 + diff_ns / 1000;
 
 	return difftimespec_us;
+}
+
+double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time){
+	double vel;
+
+	if (cycle_time != 0.0) vel = 0.0;
+	else vel = (meas_jnt_pos - prev_jnt_pos) / cycle_time;
+
+	return vel;
 }
