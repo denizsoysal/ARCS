@@ -103,7 +103,7 @@ void data_logger_resource_configuration_compute(activity_t *activity){
             "abag_ek_bar");
         fclose(params->fpt);
 
-        timespec_get(&logger_state->initial_time, TIME_UTC);
+        timespec_get(&logger_state->initial_timespec, TIME_UTC);
     }
     activity->state.lcsm_flags.resource_configuration_complete  = true;
 }
@@ -139,10 +139,9 @@ void data_logger_running_compute(activity_t *activity){
     iiwa_controller_continuous_state_t *controller_state = (iiwa_controller_continuous_state_t *) logger_state->controller_continuous_state;
     iiwa_activity_continuous_state_t *iiwa_state = (iiwa_activity_continuous_state_t *) logger_state->iiwa_continuous_state;
 
-    timespec_get(&logger_state->log_time, TIME_UTC);
-    logger_state->time_ms = 
-        (logger_state->log_time.tv_sec - logger_state->initial_time.tv_sec) * 1000 + 
-        (logger_state->log_time.tv_nsec - logger_state->initial_time.tv_nsec) / 1000000;
+    timespec_get(&logger_state->current_timespec, TIME_UTC);
+    logger_state->time_us = difftimespec_us(&logger_state->current_timespec, 
+        &logger_state->initial_timespec);
 
     pthread_mutex_lock(coord_state->actuation_lock);
     // iiwa
@@ -170,8 +169,8 @@ void data_logger_running_compute(activity_t *activity){
     
     params->fpt = fopen(params->fname.c_str(), "a");
 
-	fprintf(params->fpt, "%u, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
-        logger_state->time_ms,
+	fprintf(params->fpt, "%lu, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
+        logger_state->time_us,
         logger_state->meas_jnt_pos_iiwa[6],
         logger_state->meas_torques_iiwa[6],
         logger_state->meas_ext_torques_iiwa[6],

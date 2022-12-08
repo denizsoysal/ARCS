@@ -38,9 +38,9 @@ typedef struct data_logger_continuous_state_s{
     iiwa_controller_continuous_state_t *controller_continuous_state;
     iiwa_activity_continuous_state_t *iiwa_continuous_state;
 
-    struct timespec initial_time;
-    struct timespec log_time;
-    unsigned int time_ms;
+    struct timespec initial_timespec;
+    struct timespec current_timespec;
+    unsigned long time_us;
     
     // local variables for memcpy and fprint
     // state of abag

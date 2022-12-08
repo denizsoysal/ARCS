@@ -381,12 +381,18 @@ void iiwa_controller_running_compute(activity_t *activity){
 	*/
 
 	if (coord_state->first_run_compute_cycle){
-		cycle_time = 0.0;
-		meas_jnt_vel = 0.0;
 		coord_state->first_run_compute_cycle = FALSE;
-		get_cycle_time(&continuous_state->prev_timespec, &continuous_state->current_timespec);
+		timespec_get(&continuous_state->current_timespec, TIME_UTC);
+		cycle_time = 0.0;
+		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
+		    sizeof(continuous_state->current_timespec));
+		meas_jnt_vel = 0.0;
 	}else{
-		cycle_time = get_cycle_time(&continuous_state->prev_timespec, &continuous_state->current_timespec);
+		timespec_get(&continuous_state->current_timespec, TIME_UTC);
+		cycle_time = (double) difftimespec_us(&continuous_state->current_timespec, 
+		    &continuous_state->prev_timespec) / 1000000.0;
+		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
+		    sizeof(continuous_state->current_timespec));
 		meas_jnt_vel = (params->local_sensors.meas_jnt_pos[6] - continuous_state->jnt_pos_prev[6])/cycle_time;
 	}
 	
@@ -632,16 +638,15 @@ template <typename T> T saturate(T val, T sat_low, T sat_high){
     return val;
 }
 
-double get_cycle_time(struct timespec *prev_timespec, struct timespec *current_timespec){
-    double cycle_time; // cycle time in second
-	double ftime_prev;
-	double ftime_current;
+long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec){
+    long difftimespec_us; // cycle time in microseconds
+	double diff_s;
+	long diff_ns;
 
-	timespec_get(current_timespec, TIME_UTC);
-	ftime_prev = prev_timespec->tv_sec + prev_timespec->tv_nsec / 1000000000.0;
-	ftime_current = current_timespec->tv_sec + current_timespec->tv_nsec / 1000000000.0;
-	cycle_time = ftime_current - ftime_prev;
-	memcpy(prev_timespec, current_timespec, sizeof(current_timespec));
+	diff_s = difftime(current_timespec->tv_sec, prev_timespec->tv_sec);
+	diff_ns = current_timespec->tv_nsec - prev_timespec->tv_nsec;
 
-	return cycle_time;
+	difftimespec_us =  (long) diff_s * 1000000 + diff_ns / 1000;
+
+	return difftimespec_us;
 }

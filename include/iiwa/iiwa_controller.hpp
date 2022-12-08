@@ -139,10 +139,13 @@ template <typename T> int hside(T val);
 template <typename T> T saturate(T val, T sat_low, T sat_high);
     
 /**
- * compute the current timespec, and cycle time. copy current timespec to previous timespec.
- * todo move this time tracking into activity.h
+ * Compute the difference in microseconds between two timespecs.
+ * 
+ * @param *current_timespec from timespec_get()
+ * @param *previous_timespec from timespec_get()
+ * @return the time difference in microseconds from current-previous. 
 */   
-double get_cycle_time(struct timespec *prev_timespec, struct timespec *current_timespec);
+long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec);
 
 double *cubic_vel_traj_1d(double vel1, double acc1, double vel2, double acc2, double duration);
 
