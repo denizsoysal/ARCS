@@ -88,7 +88,7 @@ void data_logger_resource_configuration_compute(activity_t *activity){
     data_logger_params_t *params = (data_logger_params_t *) activity->conf.params;
     data_logger_continuous_state_t *logger_state = (data_logger_continuous_state_t *) activity->state.computational_state.continuous;
     if (activity->state.lcsm_protocol == EXECUTION){
-        params->fpt = fopen(params->fname.c_str(), "a");
+        params->fpt = fopen(params->fname.c_str(), "w");
 	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s, %s\n", 
             "time_ms",
             "meas_jnt_pos_iiwa[6]",
