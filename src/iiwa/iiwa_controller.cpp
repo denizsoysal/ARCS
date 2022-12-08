@@ -273,21 +273,10 @@ void iiwa_controller_running_communicate_write(activity_t *activity){
 	
 	// Write the motion actuation commands back to the iiwa
 	pthread_mutex_lock(coord_state->actuation_lock);
-	// copy velocity and every case, and extras depending on control mode...
+	// copy everything in every case, and relevant params will be set to 0
 	memcpy(state->iiwa_controller_state->cmd_jnt_vel, state->local_cmd_jnt_vel, sizeof(state->local_cmd_jnt_vel));
-	switch(state->iiwa_controller_state->cmd_mode){
-		case(POSITION): break;
-		case(WRENCH):
-		{
-		    memcpy(state->iiwa_controller_state->cmd_wrench, state->local_cmd_wrench, sizeof(state->local_cmd_wrench));
-			break;
-		}
-		case(TORQUE):
-		{
-			memcpy(state->iiwa_controller_state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
-			break;
-		}
-	}
+	memcpy(state->iiwa_controller_state->cmd_wrench, state->local_cmd_wrench, sizeof(state->local_cmd_wrench));
+	memcpy(state->iiwa_controller_state->cmd_torques, state->local_cmd_torques, sizeof(state->local_cmd_torques));
 	pthread_mutex_unlock(coord_state->actuation_lock);
 }
 
@@ -502,7 +491,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 				}
 				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
                 continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
-			    printf("The velocity is: %f \n", meas_jnt_vel);
+				continuous_state->local_cmd_wrench[6] = 0.0;
 				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 			}
 			break;
