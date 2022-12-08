@@ -166,28 +166,6 @@ void* set_petrinet(void* activity){
 // 	return 0;
 // }
 
-// void* save_sensor_data(void* activity){
-// 	activity_t *iiwa_virtual = (activity_t*) activity; 
-// 	iiwa_virtual_params_t* params = (iiwa_virtual_params_t *) iiwa_virtual->conf.params;
-// 	iiwa_virtual_continuous_state_t *continuous_state =
-// 	(iiwa_virtual_continuous_state_t *) iiwa_virtual->state.computational_state.continuous;
-// 	iiwa_virtual_coordination_state_t *coord_state =
-// 	(iiwa_virtual_coordination_state_t *) iiwa_virtual->state.coordination_state;  
-
-// 	while(!(*deinitialisation_request)){
-// 		printf("%f \n",continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques[0]);
-// 		if (iiwa_virtual->lcsm.state == RUNNING){
-// 			fpt = fopen("jnt_pos.csv", "a+");
-// 			pthread_mutex_lock(&coord_state->sensor_lock);
-// 			memcpy(jnt_pos_save, continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos, 7 * sizeof(double));
-// 			pthread_mutex_unlock(&coord_state->sensor_lock);
-// 			fprintf(fpt, " %f, %f, %f, %f, %f, %f, %f \n", jnt_pos_save[0], jnt_pos_save[1], jnt_pos_save[2],
-// 															jnt_pos_save[3], jnt_pos_save[4], jnt_pos_save[5], jnt_pos_save[6]);
-// 			fclose(fpt);
-// 		}
-// 	}
-// }
-
 int main(int argc, char**argv){
 	signal(SIGINT, sigint_handler);
 	

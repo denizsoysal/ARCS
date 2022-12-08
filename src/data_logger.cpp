@@ -89,14 +89,18 @@ void data_logger_resource_configuration_compute(activity_t *activity){
     data_logger_continuous_state_t *logger_state = (data_logger_continuous_state_t *) activity->state.computational_state.continuous;
     if (activity->state.lcsm_protocol == EXECUTION){
         params->fpt = fopen(params->fname.c_str(), "w");
-	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s, %s\n", 
+        // make header
+	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s\n", 
             "time_ms",
             "meas_jnt_pos_iiwa[6]",
             "meas_jnt_torques_iiwa[6]",
             "meas_ext_torques_iiwa[6]",
             "cmd_jnt_vel_iiwa[6]",
             "cmd_jnt_torque_iiwa[6]",
-            "cmd_wrench_iiwa[6]");
+            "abag_bias",
+            "abag_gain", 
+            "abag_control",
+            "abag_ek_bar");
         fclose(params->fpt);
 
         timespec_get(&logger_state->initial_time, TIME_UTC);
@@ -150,6 +154,8 @@ void data_logger_running_compute(activity_t *activity){
         sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_wrench));
 
     // controller abag state
+    memcpy(&logger_state->abag_state_controller, &controller_state->abag_state,
+        sizeof(controller_state->abag_state));
     pthread_mutex_unlock(coord_state->actuation_lock);
 
 
@@ -162,19 +168,19 @@ void data_logger_running_compute(activity_t *activity){
         sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_torques));
 	pthread_mutex_unlock(coord_state->sensor_lock);
     
-    // controller abag state
-    pthread_mutex_unlock(coord_state->actuation_lock);
-
     params->fpt = fopen(params->fname.c_str(), "a");
 
-	fprintf(params->fpt, "%u, %f, %f, %f, %f, %f, %f\n", 
+	fprintf(params->fpt, "%u, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
         logger_state->time_ms,
         logger_state->meas_jnt_pos_iiwa[6],
         logger_state->meas_torques_iiwa[6],
         logger_state->meas_ext_torques_iiwa[6],
         logger_state->cmd_jnt_vel_iiwa[6],
         logger_state->cmd_jnt_torque_iiwa[6],
-        logger_state->cmd_wrench_iiwa[6]);
+        logger_state->abag_state_controller.bias,
+        logger_state->abag_state_controller.gain,
+        logger_state->abag_state_controller.control,
+        logger_state->abag_state_controller.ek_bar);
 	fclose(params->fpt);
 }
 

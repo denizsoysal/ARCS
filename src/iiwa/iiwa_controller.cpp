@@ -491,7 +491,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 				}
 				continuous_state->local_cmd_jnt_vel[6] = meas_jnt_vel;
                 continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
-				continuous_state->local_cmd_wrench[6] = 0.0;
 				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 			}
 			break;
