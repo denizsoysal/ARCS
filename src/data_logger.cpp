@@ -140,15 +140,6 @@ void data_logger_running_compute(activity_t *activity){
         (logger_state->log_time.tv_sec - logger_state->initial_time.tv_sec) * 1000 + 
         (logger_state->log_time.tv_nsec - logger_state->initial_time.tv_nsec) / 1000000;
 
-	pthread_mutex_lock(coord_state->sensor_lock);
-    memcpy(logger_state->meas_ext_torques_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_ext_torques,
-        sizeof(iiwa_state->iiwa_state.iiwa_sensors));
-    memcpy(logger_state->meas_jnt_pos_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos,
-        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos));
-    memcpy(logger_state->meas_torques_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_torques,
-        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_torques));
-	pthread_mutex_unlock(coord_state->sensor_lock);
-    
     pthread_mutex_lock(coord_state->actuation_lock);
     // iiwa
     memcpy(logger_state->cmd_jnt_vel_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_jnt_vel,
@@ -158,6 +149,19 @@ void data_logger_running_compute(activity_t *activity){
     memcpy(logger_state->cmd_wrench_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_jnt_vel,
         sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_wrench));
 
+    // controller abag state
+    pthread_mutex_unlock(coord_state->actuation_lock);
+
+
+	pthread_mutex_lock(coord_state->sensor_lock);
+    memcpy(logger_state->meas_ext_torques_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_ext_torques,
+        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_ext_torques));
+    memcpy(logger_state->meas_jnt_pos_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos,
+        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos));
+    memcpy(logger_state->meas_torques_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_torques,
+        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_torques));
+	pthread_mutex_unlock(coord_state->sensor_lock);
+    
     // controller abag state
     pthread_mutex_unlock(coord_state->actuation_lock);
 
