@@ -513,7 +513,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 void iiwa_controller_running(activity_t *activity){
 	iiwa_controller_running_communicate_read(activity);
 	iiwa_controller_running_coordinate(activity);
-	printf("The controller state is: %d \n", activity->fsm[0].state);
 	iiwa_controller_running_compute(activity);
 	iiwa_controller_running_communicate_write(activity);
 	iiwa_controller_running_configure(activity);

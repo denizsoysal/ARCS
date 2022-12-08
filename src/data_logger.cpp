@@ -88,7 +88,7 @@ void data_logger_resource_configuration_compute(activity_t *activity){
     data_logger_params_t *params = (data_logger_params_t *) activity->conf.params;
     data_logger_continuous_state_t *logger_state = (data_logger_continuous_state_t *) activity->state.computational_state.continuous;
     if (activity->state.lcsm_protocol == EXECUTION){
-        params->fpt = fopen(params->fname, "a");
+        params->fpt = fopen(params->fname.c_str(), "a");
 	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s, %s\n", 
             "time_ms",
             "meas_jnt_pos_iiwa[6]",
@@ -155,18 +155,18 @@ void data_logger_running_compute(activity_t *activity){
         sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_jnt_vel));
     memcpy(logger_state->cmd_jnt_torque_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques,
         sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques));
-    memcpy(logger_state->cmd_wrench_iiwa, state->iiwa_state->iiwa_state.iiwa_actuation_input.cmd_jnt_vel,
+    memcpy(logger_state->cmd_wrench_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_jnt_vel,
         sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_wrench));
 
     // controller abag state
     pthread_mutex_unlock(coord_state->actuation_lock);
 
-    params->fpt = fopen(params->fname, "a");
+    params->fpt = fopen(params->fname.c_str(), "a");
 
 	fprintf(params->fpt, "%u, %f, %f, %f, %f, %f, %f\n", 
-        logger_state->time_ms;
+        logger_state->time_ms,
         logger_state->meas_jnt_pos_iiwa[6],
-        logger_state->meas_jnt_torques_iiwa[6],
+        logger_state->meas_torques_iiwa[6],
         logger_state->meas_ext_torques_iiwa[6],
         logger_state->cmd_jnt_vel_iiwa[6],
         logger_state->cmd_jnt_torque_iiwa[6],

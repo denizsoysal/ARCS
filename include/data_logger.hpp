@@ -42,8 +42,9 @@ typedef struct data_logger_continuous_state_s{
     struct timespec log_time;
     unsigned int time_ms;
     
+    // local variables for memcpy and fprint
     // state of abag
-    abag_state_t abag_state_log;
+    abag_state_t abag_state_controller;
     // outputs of controller
     double cmd_jnt_vel_controller[LBRState::NUMBER_OF_JOINTS];
     double cmd_jnt_torque_controller[LBRState::NUMBER_OF_JOINTS];
