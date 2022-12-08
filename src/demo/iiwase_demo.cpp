@@ -37,6 +37,7 @@ static void sigint_handler(int sig){
 		printf("\nDeinitialising iiwa activity\n");
 		*deinitialisation_request = true;
 		*deinit_controller = true;
+		*deinit_logger = true;
 	}
 }
 
