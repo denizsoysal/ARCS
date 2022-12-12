@@ -242,6 +242,7 @@ int main(int argc, char**argv){
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
 	// Manually 
+	iiwa_controller_params->cmd_mode = TORQUE; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
 	data_logger_coord_state->execution_request = true;
 	data_logger_params->fname = "logging.csv";
