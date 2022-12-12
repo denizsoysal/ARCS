@@ -383,7 +383,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	// compute the joint velocities
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
-		    (double) continuous_state->cycle_time_us / 1000000);
+		    (double) continuous_state->cycle_time_us / 1000000.0);
 	}
 	
 	switch(params->cmd_mode){
