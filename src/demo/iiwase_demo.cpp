@@ -8,6 +8,11 @@
 /**
 	* @file iiwase_demo.cpp
 	* @date November 14, 2022
+
+TODO
+- check the velocity as read in the controller and print in the logging activity
+  - do I need a mutex AND a local copy of everything I want to share for logging purposes?
+  - for now, just don't use the mutex for logging purposes.
  **/
 
 #include <stdio.h>

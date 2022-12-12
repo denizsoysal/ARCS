@@ -45,14 +45,20 @@ typedef struct data_logger_continuous_state_s{
     // local variables for memcpy and fprint
     // state of abag
     abag_state_t abag_state_controller;
+
+    // state of controller measured speed (estimated)
+    double meas_jnt_vel_controller[LBRState::NUMBER_OF_JOINTS];
+    
     // outputs of controller
     double cmd_jnt_vel_controller[LBRState::NUMBER_OF_JOINTS];
     double cmd_jnt_torque_controller[LBRState::NUMBER_OF_JOINTS];
     double cmd_wrench_controller[CART_VECTOR_DIM];
+
     // commands received by iiwa
     double cmd_jnt_vel_iiwa[LBRState::NUMBER_OF_JOINTS];
     double cmd_jnt_torque_iiwa[LBRState::NUMBER_OF_JOINTS];
     double cmd_wrench_iiwa[CART_VECTOR_DIM];
+
     // state of the iiwa
     double meas_jnt_pos_iiwa[LBRState::NUMBER_OF_JOINTS];
 	double meas_torques_iiwa[LBRState::NUMBER_OF_JOINTS];
