@@ -83,24 +83,17 @@ typedef struct iiwa_controller_params_s{
 
 // Continuous state which is the state of the controller system, including input and output signals
 typedef struct iiwa_controller_continuous_state_s{
-    // TODO make pointers here and copy them 
-    // Input signals from arm sensors
-    double 	*meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    double 	*meas_torques[LBRState::NUMBER_OF_JOINTS];
-	double 	*meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
+    // Input signals from arm sensors (pointers to first elements in array)
+    double 	*meas_jnt_pos;
+    double 	*meas_torques;
+	double 	*meas_ext_torques;
 
-    // Output signals to iiwa
-	struct iiwa_controller_output_s{
-		double 			cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-		double 			cmd_torques[LBRState::NUMBER_OF_JOINTS];
-		double 			cmd_wrench[CART_VECTOR_DIM];
-	}*iiwa_controller_output;
+    // Output signals to iiwa 
+	double	*cmd_jnt_vel;
+	double	*cmd_torques;
+	double	*cmd_wrench;
 
-	double	cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-	double	*cmd_torques[LBRState::NUMBER_OF_JOINTS];
-	double	*cmd_wrench[CART_VECTOR_DIM];
-
-    // Local copies of inputs and outputs
+    // Local copies of inputs and outputs will be deep copied with memcpy()
     double  local_meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
     double  local_meas_torques[LBRState::NUMBER_OF_JOINTS];
 	double  local_meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
@@ -175,5 +168,7 @@ long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_ti
  * This gives a positive control signal uk when the value is less than the setpoint.
 */
 void abag(abag_params_t *params, abag_state_t *state, double val, double setpoint);
+
+double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time);
 
 #endif //iiwa_controller_HPP

@@ -219,8 +219,15 @@ int main(int argc, char**argv){
 	iiwa_controller_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
 	iiwa_controller_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
 
-    // Share Sensors and Actuators between controller and iiwa
-	// TODO
+    // Share sensors between controller and iiwa
+	iiwa_controller_continuous_state->meas_jnt_pos = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos;
+	iiwa_controller_continuous_state->meas_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_torques;
+	iiwa_controller_continuous_state->meas_ext_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques;
+
+	// Share actuators between controller and iiwa
+	iiwa_controller_continuous_state->cmd_jnt_vel = iiwa_activity_params->iiwa_params.cmd_jnt_vel;
+	iiwa_controller_continuous_state->cmd_torques = iiwa_activity_params->iiwa_params.cmd_torques;
+	iiwa_controller_continuous_state->cmd_wrench = iiwa_activity_params->iiwa_params.cmd_wrench;
 
 	// Share memory data_logger <--> iiwa
 	data_logger_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
@@ -268,7 +275,7 @@ int main(int argc, char**argv){
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", 4); // 4 ms = 250 Hz
-	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 12);
+	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 8);
 	create_thread(&thread_mediator, "thread_mediator", 100);
 	create_thread(&thread_logger, "thread_logger", 10);
 
