@@ -454,19 +454,17 @@ void iiwa_controller_running_compute(activity_t *activity){
 		}
 		case(TORQUE):
 		{
-			if (activity->fsm[0].state != WAIT){
-				// local cmd torque = max_torque * control E [-1, 1]
-				abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->meas_jnt_vel[6]);
+			// local cmd torque = max_torque * control E [-1, 1]
+			abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->meas_jnt_vel[6]);
 
-		        for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
-				{
-					continuous_state->local_cmd_jnt_vel[i] = 0.0;
-					continuous_state->local_cmd_torques[i] = 0.0;
-				}
-				continuous_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
-                continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
-				printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
+			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
+			{
+				continuous_state->local_cmd_jnt_vel[i] = 0.0;
+				continuous_state->local_cmd_torques[i] = 0.0;
 			}
+			continuous_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
+			continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
+			printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
 			break;
 		}
 	}
