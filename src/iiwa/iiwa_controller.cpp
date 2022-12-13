@@ -241,9 +241,9 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
-	memcpy(state->local_meas_torques, state->meas_torques, sizeof(state->meas_torques));
-	memcpy(state->local_meas_jnt_pos, state->meas_jnt_pos, sizeof(state->meas_jnt_pos));
-    memcpy(state->local_meas_ext_torques, state->meas_ext_torques, sizeof(state->meas_ext_torques));
+	memcpy(state->local_meas_torques, state->meas_torques, sizeof(state->local_meas_torques));
+	memcpy(state->local_meas_jnt_pos, state->meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
+    memcpy(state->local_meas_ext_torques, state->meas_ext_torques, sizeof(state->local_meas_ext_torques));
 	pthread_mutex_unlock(coord_state->sensor_lock);
 
     // read goals from other, depending on control mode
@@ -620,7 +620,7 @@ long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_ti
 double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time){
 	double vel;
 
-	if (cycle_time != 0.0) vel = 0.0;
+	if (cycle_time == 0.0) vel = 0.0;
 	else vel = (meas_jnt_pos - prev_jnt_pos) / cycle_time;
 
 	return vel;
