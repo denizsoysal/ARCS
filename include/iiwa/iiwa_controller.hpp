@@ -21,7 +21,14 @@
 #include "iiwa_client.hpp"
 #include "iiwa_interface.hpp"
 
+// KDL
+#include <chain.hpp>
+#include <frames_io.hpp>
+#include <chainfksolverpos_recursive.hpp>
+#include <chainfksolvervel_recursive.hpp>
+
 using namespace std;
+using namespace KDL;
 
 typedef struct iiwa_controller_s{
 	void (*create_lcsm)(activity_t*, const char* name_activity);
@@ -77,6 +84,7 @@ typedef struct iiwa_controller_params_s{
 
     // parameter for bounding the capability of the controller
     double max_torque;
+    double max_wrench;
 
     abag_params_t abag_params;
 }iiwa_controller_params_t;
@@ -100,7 +108,11 @@ typedef struct iiwa_controller_continuous_state_s{
 	double	local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_wrench[CART_VECTOR_DIM];
-	
+
+    JntArray local_q;
+    JntArrayVel local_qd;
+    FrameVel local_cartvel;
+
     // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
     double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];

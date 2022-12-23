@@ -21,6 +21,14 @@ endif()
 ## Build ##
 ###########
 
+# Eigen requirement for KDL
+find_package(Eigen3 REQUIRED)
+message(STATUS ${EIGEN3_INCLUDE_DIR})
+
+# KDL and KDL Models
+set(BUILD_MODELS ON CACHE BOOL "Build kdl models")
+add_subdirectory(external/orocos_kdl)
+
 # ROB-KUL libraries
 # FIVE C
 include(FetchContent)
@@ -75,7 +83,7 @@ add_library(${PROJECT_NAME} SHARED
     src/task_mediator/task_mediator_petrinet.cpp
 )
 
-add_dependencies(${PROJECT_NAME} five_c coordination_libraries iiwa_aacal)
+add_dependencies(${PROJECT_NAME} five_c coordination_libraries iiwa_aacal orocos-kdl orocos-kdl-models)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
@@ -84,6 +92,9 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${FIVE_C_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${COORDINATON_LIBRARIES_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${IIWA_AACAL_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/models>
+        $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/src>
+        $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
 )
 
 target_link_directories(${PROJECT_NAME}
@@ -96,16 +107,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     five_c
     coordination_libraries
     iiwa_aacal
+    PUBLIC orocos-kdl orocos-kdl-models
 )
 
 if(STAND_ALONE)
-    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
-    target_link_libraries(iiwase_demo PRIVATE
+    add_executable(kuka_iiwa src/demo/kuka_iiwa.cpp)
+    target_link_libraries(kuka_iiwa PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c
         coordination_libraries
         iiwa_aacal
+        PUBLIC orocos-kdl orocos-kdl-models
         )    
 endif()
 

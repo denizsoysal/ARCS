@@ -201,7 +201,7 @@ int main(int argc, char**argv){
 
 	strcpy(iiwa_activity_params->iiwa_params.fri_ip,"192.168.1.50");
 	iiwa_activity_params->iiwa_params.fri_port = 30100;
-	iiwa_activity_params->iiwa_params.cmd_mode = TORQUE;
+	iiwa_activity_params->iiwa_params.cmd_mode = WRENCH;
 	
 	// Initialize Vars: iiwa_controller
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
@@ -247,7 +247,7 @@ int main(int argc, char**argv){
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
 	// Manually 
-	iiwa_controller_params->cmd_mode = TORQUE; // TODO link with iiwa? Should it be param or state?
+	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
 	data_logger_coord_state->execution_request = true;
 	data_logger_params->fname = "logging.csv";

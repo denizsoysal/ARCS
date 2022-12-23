@@ -17,6 +17,27 @@
 #include "iiwa/iiwa_controller.hpp"
 #include <iostream>
 
+#include <chain.hpp>
+#include <chainiksolver.hpp>
+#include <chainfksolverpos_recursive.hpp>
+#include <frames_io.hpp>
+#include <stdio.h>
+#include <iostream>
+
+#include <chainidsolver_recursive_newton_euler.hpp>
+#include <models.hpp>
+
+using namespace KDL;
+
+// Global Vars (BAD)
+Chain iiwa_robot=KukaIIWA14();
+
+Vector gravity = Vector(0.0,0.0,-9.81);
+
+// Forward Kinematics Solver
+ChainFkSolverPos_recursive fksolver(iiwa_robot);
+ChainFkSolverVel_recursive velksolver(iiwa_robot);
+
 // TODO create local fsm states
 #define WAIT 0
 #define APPROACH 1
@@ -83,7 +104,11 @@ void iiwa_controller_creation_configure(activity_t *activity){
 
 // Allocating memory here
 void iiwa_controller_creation_compute(activity_t *activity){
+	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
     activity->fsm = (FSM_t *) malloc(sizeof(FSM_t));
+    cts_state->local_q = JntArray(LBRState::NUMBER_OF_JOINTS);
+	cts_state->local_qd = JntArray(LBRState::NUMBER_OF_JOINTS);
+
 	activity->state.lcsm_flags.creation_complete = true;
 }
 
@@ -157,6 +182,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 		// Configure controller for running state
 		params->max_torque = 2.0;
+		params->max_wrench = 1.0;
 
 		// Configure ABAG Controller
 		params->abag_params.sat_high = 1;
@@ -356,6 +382,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
+	double local_vz;
 
     /*
     // path variables for blend
@@ -384,7 +411,13 @@ void iiwa_controller_running_compute(activity_t *activity){
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
 		    (double) continuous_state->cycle_time_us / 1000000.0);
+
+		// write the joint velocities to the JntArray
+		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
+
+    // Forward velocity kinematics
+	velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
 	
 	switch(params->cmd_mode){
 		case(POSITION):
@@ -427,29 +460,20 @@ void iiwa_controller_running_compute(activity_t *activity){
 		}
 		case(WRENCH):
 		{	
-			//In this mode, we command both the jnt vel (jnt) and the end effector wrench (cart)
-			// Can we then command it to 0 everytime ? Will it have the wanted behavior? 
-			for (unsigned int i=0;i<CART_VECTOR_DIM;i++)
-			{
-				//To do: implement an ABAQ controller to ensure a smooth acceleration (through ~continuous wrench)
-				double cmd_wrench;
-				cmd_wrench = (params->local_goal_wrench[i] - continuous_state->local_meas_ext_torques[i]);
-				if (fabs(cmd_wrench)<0.02)
-				{
-					cmd_wrench = 0.0;
-				}
-				if (fabs(cmd_wrench) > params->max_wrench_step)
-				{
-					cmd_wrench = sgn(cmd_wrench) * params->max_wrench_step;
-				} 
-				continuous_state->local_cmd_wrench[i] = cmd_wrench;
-			}
-			printf("In wrench control, cmd: %f \n", continuous_state->local_cmd_wrench[5]);
+            // extract the z component
+			local_vz = continuous_state->local_cartvel.GetTwist()(2);
+			abag(&params->abag_params, &continuous_state->abag_state, 0.1, local_vz);
+
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
-				// write the command velocity to the local variable
-				continuous_state->local_cmd_jnt_vel[i] = 0;
+				continuous_state->local_cmd_jnt_vel[i] = 0.0;
 			}
+			for (unsigned int i=0;i<6;i++)
+			{
+				continuous_state->local_cmd_wrench[i] = 0.0;
+			}
+			continuous_state->local_cmd_wrench[2] = params->max_wrench * continuous_state->abag_state.control; 
+			printf("In wrench control, cmd: %f \n", continuous_state->local_cmd_wrench[2]);
 			break;
 		}
 		case(TORQUE):
