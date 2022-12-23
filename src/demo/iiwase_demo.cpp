@@ -115,7 +115,7 @@ void* set_petrinet(void* activity){
 	
 	while(!(*deinitialisation_request)){
 		usleep(1000*dt);  // time in microseconds
-		// printf("Time %f: \n", t);
+		printf("Time %f: \n", t);
 		if (mediator_activity->lcsm.state == RUNNING){
 			// Copying data
 			if (t < 2){

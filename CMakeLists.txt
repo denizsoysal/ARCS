@@ -111,8 +111,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(STAND_ALONE)
-    add_executable(kuka_iiwa src/demo/kuka_iiwa.cpp)
-    target_link_libraries(kuka_iiwa PRIVATE
+    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
+    target_link_libraries(iiwase_demo PRIVATE
         ${PROJECT_NAME}
         pthread
         five_c
