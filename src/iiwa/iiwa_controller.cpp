@@ -107,7 +107,7 @@ void iiwa_controller_creation_compute(activity_t *activity){
 	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
     activity->fsm = (FSM_t *) malloc(sizeof(FSM_t));
     cts_state->local_q = JntArray(LBRState::NUMBER_OF_JOINTS);
-	cts_state->local_qd = JntArray(LBRState::NUMBER_OF_JOINTS);
+	cts_state->local_qd = JntArrayVel(LBRState::NUMBER_OF_JOINTS);
 
 	activity->state.lcsm_flags.creation_complete = true;
 }
