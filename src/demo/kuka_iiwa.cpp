@@ -11,7 +11,7 @@
  
 using namespace KDL;
  
- 
+KDL::Chain kdl_kin_chain = KDL::KukaIIWA14();
 int main( int argc, char** argv )
 {
     Chain iiwa_robot=KukaIIWA14();

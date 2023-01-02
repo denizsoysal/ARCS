@@ -214,12 +214,15 @@ void data_logger_create_lcsm(activity_t* activity, const char* name_activity){
 }
 
 void data_logger_resource_configure_lcsm(activity_t *activity){
+    data_logger_coordination_state_t *coord_state = (data_logger_coordination_state_t *) activity->state.coordination_state;
     resource_configure_lcsm_activity(activity);
     activity->mid = 2;
     // Select the inital state of LCSM for this activity
     activity->lcsm.state = CREATION;
-    activity->state.lcsm_protocol = EXECUTION;
-
+    activity->state.lcsm_protocol = INITIALISATION;
+    coord_state->deinitialisation_request = false;
+    coord_state->execution_request = false; 
+    
     // Schedule table (adding config() for the first eventloop iteration)
     data_logger_register_schedules(activity);
     add_schedule_to_eventloop(&activity->schedule_table, "activity_config");
