@@ -32,8 +32,8 @@ KDL::Chain iiwa_robot_kdl=KDL::KukaIIWA14();
 // Vector gravity = Vector(0.0,0.0,-9.81);
 
 // Forward Kinematics Solver
-// KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot);
-// KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot);
+KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot);
+KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot);
 
 // TODO create local fsm states
 #define WAIT 0
@@ -410,11 +410,11 @@ void iiwa_controller_running_compute(activity_t *activity){
 		    (double) continuous_state->cycle_time_us / 1000000.0);
 
 		// write the joint velocities to the JntArray
-		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
+		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
 
     // Forward velocity kinematics
-	// velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
+	velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
 	
 	switch(params->cmd_mode){
 		case(POSITION):
