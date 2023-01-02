@@ -27,16 +27,13 @@
 #include <chainidsolver_recursive_newton_euler.hpp>
 #include <models.hpp>
 
-using namespace KDL;
+KDL::Chain iiwa_robot=KDL::KukaIIWA14();
 
-// Global Vars (BAD)
-Chain iiwa_robot=KukaIIWA14();
-
-Vector gravity = Vector(0.0,0.0,-9.81);
+// Vector gravity = Vector(0.0,0.0,-9.81);
 
 // Forward Kinematics Solver
-ChainFkSolverPos_recursive fksolver(iiwa_robot);
-ChainFkSolverVel_recursive velksolver(iiwa_robot);
+// KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot);
+// KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot);
 
 // TODO create local fsm states
 #define WAIT 0
@@ -106,8 +103,8 @@ void iiwa_controller_creation_configure(activity_t *activity){
 void iiwa_controller_creation_compute(activity_t *activity){
 	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
     activity->fsm = (FSM_t *) malloc(sizeof(FSM_t));
-    cts_state->local_q = JntArray(LBRState::NUMBER_OF_JOINTS);
-	cts_state->local_qd = JntArrayVel(LBRState::NUMBER_OF_JOINTS);
+    cts_state->local_q = KDL::JntArray(LBRState::NUMBER_OF_JOINTS);
+	cts_state->local_qd = KDL::JntArrayVel(LBRState::NUMBER_OF_JOINTS);
 
 	activity->state.lcsm_flags.creation_complete = true;
 }

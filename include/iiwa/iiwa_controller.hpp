@@ -28,7 +28,6 @@
 #include <chainfksolvervel_recursive.hpp>
 
 using namespace std;
-using namespace KDL;
 
 typedef struct iiwa_controller_s{
 	void (*create_lcsm)(activity_t*, const char* name_activity);
@@ -109,9 +108,9 @@ typedef struct iiwa_controller_continuous_state_s{
 	double	local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_wrench[CART_VECTOR_DIM];
 
-    JntArray local_q;
-    JntArrayVel local_qd;
-    FrameVel local_cartvel;
+    KDL::JntArray local_q;
+    KDL::JntArrayVel local_qd;
+    KDL::FrameVel local_cartvel;
 
     // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
