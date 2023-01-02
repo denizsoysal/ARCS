@@ -27,7 +27,7 @@
 #include <chainidsolver_recursive_newton_euler.hpp>
 #include <models.hpp>
 
-KDL::Chain iiwa_robot=KDL::KukaIIWA14();
+KDL::Chain iiwa_robot_kdl=KDL::KukaIIWA14();
 
 // Vector gravity = Vector(0.0,0.0,-9.81);
 
@@ -410,7 +410,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		    (double) continuous_state->cycle_time_us / 1000000.0);
 
 		// write the joint velocities to the JntArray
-		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
+		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
 
     // Forward velocity kinematics
