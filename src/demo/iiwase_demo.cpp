@@ -242,6 +242,11 @@ int main(int argc, char**argv){
 	// Task <-> Controller  
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
+	// Initialize the Mutex
+	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
+	pthread_mutex_init(&iiwa_activity_coord_state->actuation_lock, NULL);
+	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
+
 	// Manually 
 	iiwa_controller_params->cmd_mode = TORQUE; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
