@@ -414,7 +414,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	}
 
     // Forward velocity kinematics
-	velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
+	// velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
 	
 	switch(params->cmd_mode){
 		case(POSITION):
