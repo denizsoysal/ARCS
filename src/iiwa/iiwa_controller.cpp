@@ -32,8 +32,8 @@ KDL::Chain iiwa_robot_kdl=KDL::KukaIIWA14();
 // Vector gravity = Vector(0.0,0.0,-9.81);
 
 // Forward Kinematics Solver
-KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot);
-KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot);
+KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot_kdl);
+KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot_kdl);
 
 // TODO create local fsm states
 #define WAIT 0
