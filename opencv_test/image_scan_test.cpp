@@ -59,7 +59,8 @@ static void CannyThreshold(int, void*);
 
 int main( int argc, char** argv )
 {
-  src = imread("/home/lejoint/Documents/ARCS_Deniz/data/ARCS_dataset_whiteboard/test_image1.pgm",IMREAD_GRAYSCALE);
+  //src = imread("/home/lejoint/Documents/ARCS_Deniz/data/ARCS_dataset_whiteboard/test_image1.pgm",IMREAD_GRAYSCALE);
+  src = imread("/home/deniz/Documents/phd/arcs/repository/ARCS/whiteboard.jpeg",IMREAD_GRAYSCALE);
   namedWindow( window_name, WINDOW_AUTOSIZE ); // Create window
 
   createTrackbar("Operator:\n 0: Opening - 1: Closing  \n 2: Gradient - 3: Top Hat \n 4: Black Hat", window_name, &morph_operator, max_operator, Morphology_Operations );

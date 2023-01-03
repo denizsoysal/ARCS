@@ -45,7 +45,7 @@ int main( int argc, char** argv )
   cv::Mat image, sum, squared_diff, image_blurred, absolute_diff, closed_image, closed_image_blurred;
   
   //read image
-  image = imread("../whiteboard.jpg",IMREAD_COLOR);
+  image = imread("../zDPja.jpg",IMREAD_COLOR);
 
   //Blur the image with 3x3 Gaussian kernel
   GaussianBlur(image, image_blurred, Size(3, 3), 0);
@@ -57,8 +57,9 @@ int main( int argc, char** argv )
   double sum_absolute_diff_initial = cv::sum(cv::sum(absolute_diff))[0];
   std::cout << "initial loss: " << sum_absolute_diff_initial << "\n";
 
-  //create an array of 3 elements: previous loss, current loss
-  double loss_array [3];
+  //create an array of 2 elements: previous loss, current loss
+  double loss_array [2];
+  //previous loss at the beginning: initial loss
   loss_array[0] = sum_absolute_diff_initial;
 
   //loop for different kernel size (i) until we reach a plateau (minimum) 
@@ -78,21 +79,30 @@ int main( int argc, char** argv )
     double sum_absolute_diff = cv::sum(cv::sum(absolute_diff))[0];
     std::cout << "loss of the closed image: " <<sum_absolute_diff << "\n";
 
+    //add this loss as current loss
     loss_array[1] = sum_absolute_diff;
 
+    //compute ratio between current loss and previous loss
     double ratio = loss_array[1] / loss_array[0];
-
     std::cout << "loss improvement is: " << 1/ratio << "\n";
 
+    //if this ratio is higher than 0.8, this means that we don't improve a lot
+    //this threshold is user-defined
     if(i>0 and ratio > 0.8){
+
       std::cout << "Loss plateau reached !" << "\n";
       std::cout<< "Final 'i' is:" << i << "\n" << "Final kernel size is then:" << 2*i+1 << "\n";
+
+      namedWindow("final closed image", WINDOW_NORMAL);
+      cv::resizeWindow("final closed image", 300, 300);
       imshow("final closed image",closed_image);
       waitKey();
+
       break;
 
     }
 
+    //if ratio threshold not reached, add this loss as previous loss
     loss_array[0] = sum_absolute_diff;
 
   }

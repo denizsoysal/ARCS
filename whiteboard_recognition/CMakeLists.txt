@@ -31,6 +31,10 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
   add_executable(closing_adaptive
   closing_adaptive.cpp
   )
+  
+    add_executable(template_matching
+  template_matching.cpp
+  )
 
 #   add_executable(edge_detection
 #   edge_detection.cpp
@@ -70,4 +74,5 @@ target_link_libraries( region_growing ${OpenCV_LIBS} )
 
 target_link_libraries( closing_adaptive ${OpenCV_LIBS} )
 
+target_link_libraries( template_matching ${OpenCV_LIBS} )
 
