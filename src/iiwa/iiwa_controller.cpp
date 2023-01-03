@@ -179,7 +179,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 		// Configure controller for running state
 		params->max_torque = 2.0;
-		params->max_wrench = 1.0;
+		params->max_wrench = 5.0;
 
 		// Configure ABAG Controller
 		params->abag_params.sat_high = 1;
@@ -315,50 +315,6 @@ void iiwa_controller_running_coordinate(activity_t *activity){
 			break;
 	}
 	update_super_state_lcsm_flags(&activity->state.lcsm_flags, activity->lcsm.state);
-
-	// FSM TRANSITIONS
-	// switch (activity->fsm[0].state){
-	// 	case WAIT:
-	// 	    if (fabs(error) > params->goal_buffer[6]){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}
-	// 		break;
-	// 	case APPROACH:
-	// 	    if (fabs(error) < params->approach_buffer[6] && sgn(cmd_vel) == sgn(error)){
-	// 			memcpy(&continuous_state->approach_jnt_vel, &continuous_state->local_cmd_jnt_vel, sizeof(continuous_state->local_cmd_jnt_vel));
-	// 			continuous_state->approach_jnt_acc[6] = 0;
-
-    //             // Now "configure" the controller parameters...
-	// 			/*
-	// 			continuous_state->approach_coeffs[0] = continuous_state->approach_jnt_vel[6];
-	// 			continuous_state->approach_coeffs[1] = continuous_state->approach_jnt_acc[6];
-	// 			continuous_state->approach_coeffs[2] = 3*(params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6]) - 2*continuous_state->approach_jnt_acc[6];
-	// 			continuous_state->approach_coeffs[3] = params->slow_jnt_vel[6] - continuous_state->approach_jnt_vel[6] - continuous_state->approach_jnt_acc[6] - continuous_state->approach_coeffs[2];
-	// 			*/
-
-    //             activity->fsm[0].state = BLEND;
-	// 		}
-	// 		break;
-	// 	case BLEND:
-    //         s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
-	// 	    if (fabs(error) > params->approach_buffer[6] || sgn(cmd_vel) != sgn(error)){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}else if (fabs(error) < params->slow_buffer[6]){
-    //             activity->fsm[0].state = SLOW;
-	// 		}
-	// 		break;
-	// 	case SLOW:
-	// 	    if (fabs(error) > params->slow_buffer[6] || sgn(cmd_vel) != sgn(error)){
-	// 			activity->fsm[0].state = APPROACH;
-	// 		}else if (fabs(error) < params->goal_buffer[6]){
-	// 			activity->fsm[0].state = STOP;
-	// 		}
-	// 		break;
-	// 	case STOP:
-	// 	    break;
-	// }
-
-	//printf("The controller state is: %d \n", activity->fsm[0].state);
 }
 
 void iiwa_controller_running_configure(activity_t *activity){
@@ -381,17 +337,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 	double local_vz;
 
-    /*
-    // path variables for blend
-	double s;
-	double a0 = continuous_state->approach_coeffs[0];
-	double a1 = continuous_state->approach_coeffs[1];
-	double a2 = continuous_state->approach_coeffs[2];
-	double a3 = continuous_state->approach_coeffs[3];
-	*/
-
+    // get the current timestamp and compute the current cycle time. 
 	if (coord_state->first_run_compute_cycle){
-		coord_state->first_run_compute_cycle = FALSE;
+		coord_state->first_run_compute_cycle = false;
 		timespec_get(&continuous_state->current_timespec, TIME_UTC);
 		continuous_state->cycle_time_us = 0;
 		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
@@ -419,51 +367,19 @@ void iiwa_controller_running_compute(activity_t *activity){
 	switch(params->cmd_mode){
 		case(POSITION):
 		{
-			// relevant for defining velocity zones
-			/*printf("Controller in POSITION mode \n");
-			double cmd_vel;
-			double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
-			double alpha;
-
-			double error = params->local_goal_jnt_pos[6] - params->local_sensors.meas_jnt_pos[6];
-			int direction = sgn(error); 
-
-			switch (activity->fsm[0].state){
-				case WAIT:
-					cmd_vel = 0.0;
-					break;
-				case APPROACH:
-					cmd_vel = prev_cmd_vel + direction * params->jnt_accel[6] * cycle_time;
-					if (fabs(cmd_vel) >= params->max_jnt_vel[6]){
-						cmd_vel = direction * params->max_jnt_vel[6];
-					}
-					break;
-				case BLEND:
-					s = (params->approach_buffer[6] - fabs(error)) / (params->approach_buffer[6] - params->slow_buffer[6]);
-					// cmd_vel = direction * (params->slow_jnt_vel[6] + alpha * (continuous_state->approach_jnt_vel[6] - params->slow_jnt_vel[6]));
-					cmd_vel = a0 + a1*s + a2*pow(s, 2) + a3*pow(s, 3);
-					break;
-				case SLOW:
-					cmd_vel = params->slow_jnt_vel[6] * direction;
-					break;
-				case STOP:
-					cmd_vel = 0.0;
-					break;
-				}
-
-			// write the command velocity to the local variable
-			continuous_state->local_cmd_jnt_vel[6] = cmd_vel;*/
+			//do nothing
 			break;
 		}
 		case(WRENCH):
 		{	
             // extract the z component
 			local_vz = continuous_state->local_cartvel.GetTwist()(2);
-			abag(&params->abag_params, &continuous_state->abag_state, 0.1, local_vz);
+			abag(&params->abag_params, &continuous_state->abag_state, 0.05, local_vz);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
-				continuous_state->local_cmd_jnt_vel[i] = 0.0;
+				// update the 'spring' position here. 
+				continuous_state->local_cmd_jnt_vel[i] = continuous_state->meas_jnt_vel[i];
 			}
 			for (unsigned int i=0;i<6;i++)
 			{
@@ -564,39 +480,6 @@ const iiwa_controller_t ec_iiwa_controller ={
     .resource_configure_lcsm = iiwa_controller_resource_configure_lcsm,
     .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };
-
-// double *cubic_vel_traj_1d(double vel1, double acc1, double vel2, double acc2, double duration){
-// 	// double coeff[4];
-// 	// double T[4] = {1.0, pow(duration, 1), pow(duration, 2), pow(duration, 3)};
-
-// 	// coeff[0] = vel1;
-//     // coeff[1] = acc1;
-//     // coeff[2] = (-3.0*vel1 + 3.0*vel2 - 2.0*acc1*T[1] - acc2*T[1]) / T[2];
-//     // coeff[3] = (2.0*vel1 - 2.0*vel2 + acc1*T[1] + acc2*T[1]) / T[3];
-
-//     // // cannot return an address to a local variable
-// 	// return coeff;
-// }
-
-// double acc_setpoint(double velk, double acck, double veld, double converge_distance, double cycle_time){
-//     // double *traj_coeffs;
-// 	// double traj_duration;
-// 	// double accd;
-
-// 	// // If moving at constant velk, compute time to move converge_distance
-// 	// traj_duration = converge_distance / velk;
-
-// 	// if (traj_duration < 2*cycle_time){
-// 	// 	// raise error; trying to converge much faster than controller cycle time
-// 	// }
-
-// 	// traj_coeffs = cubic_vel_traj_1d(velk, acck, veld, 0, traj_duration);
-
-// 	// // compute what the acceleration should be at the next timestep
-// 	// accd = traj_coeffs[1] + 2*traj_coeffs[2]*cycle_time + 3*traj_coeffs[3]*pow(cycle_time, 2);
-	
-// 	// return accd;
-// }
 
 void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val){
 	state->ek_bar = params->alpha * state->ek_bar + (1 - params->alpha) * sgn(setpoint - val);

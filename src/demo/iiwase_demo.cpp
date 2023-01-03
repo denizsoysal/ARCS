@@ -41,53 +41,6 @@ static void sigint_handler(int sig){
 	}
 }
 
-// void* set_actuation(void* activity){
-// 	activity_t *iiwa_controller = (activity_t*) activity; 
-// 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) iiwa_controller->conf.params;
-// 	iiwa_controller_coordination_state_t *coord_state =
-// 	(iiwa_controller_coordination_state_t *) iiwa_controller->state.coordination_state;  
-
-// 	int dt = 500; // ms
-// 	double t = 0;
-// 	double local_time = 0;
-	
-// 	while(!(*deinitialisation_request)){
-// 		usleep(1000*dt);  // time in microseconds
-// 		if (iiwa_controller->lcsm.state == RUNNING){
-// 			// Copying data
-// 			pthread_mutex_lock(&coord_state->goal_lock);
-// 			params->goal_jnt_pos[0] = 0;
-// 			params->goal_jnt_pos[1] = 0;
-// 			params->goal_jnt_pos[2] = 0;
-// 			params->goal_jnt_pos[3] = 0;
-// 			params->goal_jnt_pos[4] = 0;
-// 			params->goal_jnt_pos[5] = 0;
-// 			if (local_time < 1){
-// 				params->goal_jnt_pos[6] = 0;
-// 			}else{
-// 				params->goal_jnt_pos[6] = 1;
-// 				// if (t<5){
-// 				// 	params->goal_jnt_pos[6] = 1+ (t-1)/10;
-// 				// }
-// 				// else{
-// 				// 	params->goal_jnt_pos[6] = 1;
-// 				// }
-// 			}
-
-//             fpt2 = fopen("setpoint.csv", "a+");
-// 			fprintf(fpt2, " %f, %f \n", t, params->goal_jnt_pos[6]);
-// 			fclose(fpt2);
-
-// 			pthread_mutex_unlock(&coord_state->goal_lock);
-// 			local_time += (double)dt/1000;
-
-// 			// printf("%f\n", t);
-// 		}
-// 		t += (double)dt/1000;
-// 	}
-// 	return 0;
-// }
-
 void* set_petrinet(void* activity){
 	activity_t *mediator_activity = (activity_t*) activity; 
 	task_mediator_coordination_state_t *coord_state =
@@ -125,46 +78,6 @@ void* set_petrinet(void* activity){
 	}
 	return 0;
 }
-
-// void* set_wrench_actuation(void* activity){
-// 	activity_t *iiwa_controller = (activity_t*) activity; 
-// 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) iiwa_controller->conf.params;
-// 	iiwa_controller_coordination_state_t *coord_state =
-// 	(iiwa_controller_coordination_state_t *) iiwa_controller->state.coordination_state;  
-
-// 	int dt = 500; // ms
-// 	double t = 0;
-// 	double local_time = 0;
-	
-// 	while(!(*deinitialisation_request)){
-// 		usleep(1000*dt);  // time in microseconds
-// 		if (iiwa_controller->lcsm.state == RUNNING){
-// 			// Copying data
-// 			pthread_mutex_lock(&coord_state->goal_lock);
-// 			params->goal_wrench[0] = 0;
-// 			params->goal_wrench[1] = 0;
-// 			params->goal_wrench[2] = 0;
-// 			params->goal_wrench[3] = 0;
-// 			params->goal_wrench[4] = 0;
-// 			if (local_time < 1){
-// 				params->goal_wrench[5] = 0;
-// 			}else{
-// 				params->goal_wrench[5] = 1;
-// 			}
-
-//             fpt3 = fopen("setpoint_wrench.csv", "a+");
-// 			fprintf(fpt3, " %f, %f \n", t, params->goal_wrench[5]);
-// 			fclose(fpt3);
-
-// 			pthread_mutex_unlock(&coord_state->goal_lock);
-// 			local_time += (double)dt/1000;
-
-// 			// printf("%f\n", t);
-// 		}
-// 		t += (double)dt/1000;
-// 	}
-// 	return 0;
-// }
 
 int main(int argc, char**argv){
 	signal(SIGINT, sigint_handler);
@@ -242,37 +155,11 @@ int main(int argc, char**argv){
 	// Task <-> Controller  
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
-	// Initialize the Mutex
-	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
-	pthread_mutex_init(&iiwa_activity_coord_state->actuation_lock, NULL);
-	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
-
 	// Manually 
 	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
 	data_logger_coord_state->execution_request = true;
 	data_logger_params->fname = "logging.csv";
-
-	// Configure the Controller Parameters
-	// switch(iiwa_activity_params->iiwa_params.cmd_mode){
-	// 	case POSITION:
-	// 	{
-	// 		iiwa_controller_params->max_jnt_vel[6] = 1;
-	// 		iiwa_controller_params->slow_jnt_vel[6] = 0.1;
-	// 		iiwa_controller_params->jnt_accel[6] = 1; //10
-	// 		iiwa_controller_params->approach_buffer[6] = 0.2;
-	// 		iiwa_controller_params->slow_buffer[6] = 0.05;
-	// 		iiwa_controller_params->goal_buffer[6] = 0.01;
-	// 		break;
-	// 	}
-	// 	case WRENCH:
-	// 	{
-	// 		// Set the required controller parameters
-	// 		iiwa_controller_params->max_wrench_step = 0.01;
-	// 		break;
-	// 	}
-	// }
-	
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
@@ -296,6 +183,11 @@ int main(int argc, char**argv){
 
 	// Create POSIX threads   
 	pthread_t pthread_iiwa, pthread_iiwa_controller, pthread_mediator, pthread_petrinet, pthread_logger;
+
+	// Initialize the Mutex
+	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
+	pthread_mutex_init(&iiwa_activity_coord_state->actuation_lock, NULL);
+	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	// pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_controller);
