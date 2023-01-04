@@ -357,7 +357,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
 		    (double) continuous_state->cycle_time_us / 1000000.0);
 
-		// write the joint velocities to the JntArray
+		// write the joint positions and  velocities to the JntArray
+		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
 		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
 
