@@ -53,6 +53,8 @@ typedef struct data_logger_continuous_state_s{
     double cmd_jnt_vel_controller[LBRState::NUMBER_OF_JOINTS];
     double cmd_jnt_torque_controller[LBRState::NUMBER_OF_JOINTS];
     double cmd_wrench_controller[CART_VECTOR_DIM];
+    // cartesian velocity computed by controller
+    KDL::FrameVel cartvel_controller;
 
     // commands received by iiwa
     double cmd_jnt_vel_iiwa[LBRState::NUMBER_OF_JOINTS];

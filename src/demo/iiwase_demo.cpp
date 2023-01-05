@@ -190,7 +190,6 @@ int main(int argc, char**argv){
 	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
-	// pthread_create( &pthread_actuation, NULL, set_actuation, (void*) &iiwa_controller);
 	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
 	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
 	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
@@ -198,7 +197,6 @@ int main(int argc, char**argv){
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);
-	// pthread_join(pthread_actuation, NULL);
 	pthread_join(pthread_iiwa_controller, NULL);
 	pthread_join(pthread_logger, NULL);
 	pthread_join(pthread_mediator, NULL);

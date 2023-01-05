@@ -59,9 +59,16 @@ void data_logger_creation(activity_t *activity){
 
 // Resource configuration
 void data_logger_resource_configuration_coordinate(activity_t *activity){
+    data_logger_coordination_state_t* coord_state = (data_logger_coordination_state_t*) activity->state.coordination_state;
+
+    if (coord_state->execution_request)
+        activity->state.lcsm_protocol = EXECUTION;
+
      // Internal coordination
     if (activity->state.lcsm_flags.resource_configuration_complete){
         switch (activity->state.lcsm_protocol){ 
+            case INITIALISATION:
+                break;
             case EXECUTION:
                 activity->lcsm.state = RUNNING;
                 break;
@@ -90,15 +97,13 @@ void data_logger_resource_configuration_compute(activity_t *activity){
     if (activity->state.lcsm_protocol == EXECUTION){
         params->fpt = fopen(params->fname.c_str(), "w");
         // make header
-	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s, %s, %s\n", 
+	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s\n", 
             "time_us",
-            "meas_jnt_pos_iiwa[6]",
-            "cmd_jnt_torque_iiwa[6]",
-            "meas_jnt_vel_controller[6]",
             "abag_bias",
             "abag_gain", 
             "abag_control",
-            "abag_ek_bar");
+            "abag_ek_bar",
+            "local_vz");
         fclose(params->fpt);
 
         timespec_get(&logger_state->initial_timespec, TIME_UTC);
@@ -107,8 +112,8 @@ void data_logger_resource_configuration_compute(activity_t *activity){
 }
 
 void data_logger_resource_configuration(activity_t *activity){
-    data_logger_resource_configuration_compute(activity);
     data_logger_resource_configuration_coordinate(activity);
+    data_logger_resource_configuration_compute(activity);
     data_logger_resource_configuration_configure(activity);
 }
 
@@ -143,8 +148,8 @@ void data_logger_running_compute(activity_t *activity){
 
     pthread_mutex_lock(coord_state->actuation_lock);
     // iiwa
-    memcpy(logger_state->cmd_jnt_torque_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques,
-        sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques));
+    // memcpy(logger_state->cmd_jnt_torque_iiwa, iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques,
+    //     sizeof(iiwa_state->iiwa_state.iiwa_actuation_input.cmd_torques));
 
     // controller abag state
     memcpy(&logger_state->abag_state_controller, &controller_state->abag_state,
@@ -152,26 +157,29 @@ void data_logger_running_compute(activity_t *activity){
     pthread_mutex_unlock(coord_state->actuation_lock);
 
 
-	pthread_mutex_lock(coord_state->sensor_lock);
-    memcpy(logger_state->meas_jnt_pos_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos,
-        sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos));
-	pthread_mutex_unlock(coord_state->sensor_lock);
+	// pthread_mutex_lock(coord_state->sensor_lock);
+    // memcpy(logger_state->meas_jnt_pos_iiwa, iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos,
+    //     sizeof(iiwa_state->iiwa_state.iiwa_sensors.meas_jnt_pos));
+	// pthread_mutex_unlock(coord_state->sensor_lock);
 
-    // copy the estimated velocity without a mutex
-    memcpy(logger_state->meas_jnt_vel_controller, controller_state->meas_jnt_vel,
-        sizeof(controller_state->meas_jnt_vel));
+    // // copy the estimated velocity without a mutex
+    // memcpy(logger_state->meas_jnt_vel_controller, controller_state->meas_jnt_vel,
+    //     sizeof(controller_state->meas_jnt_vel));
+
+    // get the local cartesian velocity
+    memcpy(&logger_state->cartvel_controller, &controller_state->local_cartvel,
+        sizeof(controller_state->local_cartvel)); 
     
     params->fpt = fopen(params->fname.c_str(), "a");
 
-	fprintf(params->fpt, "%lu, %f, %f, %f, %f, %f, %f, %f\n", 
+	fprintf(params->fpt, "%lu, %f, %f, %f, %f, %f\n", 
         logger_state->time_us,
-        logger_state->meas_jnt_pos_iiwa[6],
-        logger_state->cmd_jnt_torque_iiwa[6],
-        logger_state->meas_jnt_vel_controller[6], // note: need to set the mutex on this value
         logger_state->abag_state_controller.bias,
         logger_state->abag_state_controller.gain,
         logger_state->abag_state_controller.control,
-        logger_state->abag_state_controller.ek_bar);
+        logger_state->abag_state_controller.ek_bar,
+        -1*logger_state->cartvel_controller.GetTwist()(2));
+
 	fclose(params->fpt);
 }
 
@@ -221,7 +229,7 @@ void data_logger_resource_configure_lcsm(activity_t *activity){
     activity->lcsm.state = CREATION;
     activity->state.lcsm_protocol = INITIALISATION;
     coord_state->deinitialisation_request = false;
-    coord_state->execution_request = false; 
+    coord_state->execution_request = true; 
     
     // Schedule table (adding config() for the first eventloop iteration)
     data_logger_register_schedules(activity);
