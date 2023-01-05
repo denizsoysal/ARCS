@@ -534,3 +534,12 @@ double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_t
 
 	return vel;
 }
+
+// Function to get the cartesian position of the end_effector expressed in the inertial frame (located at the bottom of the bimanual support)
+void compute_inertial_pos(activity_t *activity){
+	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	KDL::Frame arm_base_cartpos;
+	fksolver.JntToCart(continuous_state->local_q, arm_base_cartpos);
+	std::cout<< "Position in arm_base frame: " << arm_base_cartpos <<std::endl;
+	//Need to map the coordinates from the arm_base frame to the inertial frame
+}
