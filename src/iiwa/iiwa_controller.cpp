@@ -357,7 +357,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
 		    (double) continuous_state->cycle_time_us / 1000000.0);
 
-		// write the joint positions and  velocities to the JntArray
+		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
 		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
@@ -374,7 +374,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(WRENCH):
 		{	
             // extract the z component
-			local_vz = continuous_state->local_cartvel.GetTwist()(2);
+			local_vz = -1 * continuous_state->local_cartvel.GetTwist().vel(2);
 			abag(&params->abag_params, &continuous_state->abag_state, 0.05, local_vz);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)

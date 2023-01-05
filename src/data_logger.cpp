@@ -178,7 +178,7 @@ void data_logger_running_compute(activity_t *activity){
         logger_state->abag_state_controller.gain,
         logger_state->abag_state_controller.control,
         logger_state->abag_state_controller.ek_bar,
-        -1*logger_state->cartvel_controller.GetTwist()(2));
+        -1*logger_state->cartvel_controller.GetTwist().vel(2));
 
 	fclose(params->fpt);
 }
