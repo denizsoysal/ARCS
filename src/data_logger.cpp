@@ -97,7 +97,7 @@ void data_logger_resource_configuration_compute(activity_t *activity){
     if (activity->state.lcsm_protocol == EXECUTION){
         params->fpt = fopen(params->fname.c_str(), "w");
         // make header
-	    fprintf(params->fpt, "%s, %s, %s, %s, %s, %s\n", 
+	    fprintf(params->fpt, "%s,%s,%s,%s,%s,%s\n", 
             "time_us",
             "abag_bias",
             "abag_gain", 
