@@ -22,228 +22,41 @@ Mat src, src_hsv, base, hist_base, ext_1, ext_2, hist_ext_1, hist_ext_2, show;
 
 int main( int argc, char** argv )
 {
-    namedWindow( window_name, WINDOW_AUTOSIZE );
+    //define the matrix we will need
+    cv::Mat src, image, diff , gray,squared_diff, image_blurred, absolute_diff, closed_image, closed_image_blurred;
+    
+    //read image
+    image = imread("../322915141_1210091463221811_7344717193191901619_n.jpg",IMREAD_COLOR);
+    
+    //read image
+    src = imread("test.jpg",IMREAD_COLOR);
 
-    src = imread("../closed_whiteboard.jpg",IMREAD_COLOR);
-    if( src.empty() ){
-        return EXIT_FAILURE;
-    }
-    cvtColor( src, src_hsv, COLOR_BGR2HSV );
+    //substract one image from   another
+    absdiff(image, src, diff);
+
+    Mat planes[3];
+    split(diff,planes);  // planes[2] is the red channel
+
+    // //threshold on saturation level in hsv space 
+    // //https://stackoverflow.com/questions/17185151/how-to-obtain-a-single-channel-value-image-from-hsv-image-in-opencv-2-1
+    // Mat hsv_image;
+    // cvtColor(diff, hsv_image, COLOR_BGR2HSV);
+
+    // std::vector<cv::Mat> hsv_channels;
+    // cv::split(hsv_image, hsv_channels);
+    // cv::Mat h_image = hsv_channels[0];
+    // cv::Mat s_image = hsv_channels[1];
+    // cv::Mat v_image = hsv_channels[2];
 
 
-
-    // initialize variables
-    x_center = src_hsv.size().width/2.0;
-    y_center = src_hsv.size().height/2.0;
-    right_size = 0.0;
-    left_size = 0.0;
-    up_size = 0.0;
-    down_size = 0.0;
-    base_size = 10.0;
-    step = 10.0;
-
-    base = src_hsv(Range(y_center - base_size, y_center + base_size), Range(x_center - base_size, x_center + base_size));
-
-
-
-    // calculate base histogram
-    int h_bins = 180, s_bins = 256, v_bins = 256;
-    int histSize[] = { h_bins, s_bins, v_bins};
-
-    float h_ranges[] = { 0, 90 };
-    float s_ranges[] = { 0, 128 };
-    float v_ranges[] = { 0, 128 };
-    const float* ranges[] = { h_ranges, s_ranges , v_ranges};
-
-    int channels[] = { 0, 1, 2};
-    calcHist( &base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
-    normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
+    namedWindow("final closed image", WINDOW_NORMAL);
+      cv::resizeWindow("final closed image", 300, 300);
+      imshow("final closed image",diff);
+      waitKey();
 
 
 
-    // Loop over extension to all cardinal directions
-    for(int i = 0; i < 1000; i++){
-        if(up_flag){
-            //find extension +1 and +2
-            ext_1 = src_hsv(Range(y_center + base_size + up_size, y_center + base_size + up_size + step), 
-                        Range(x_center - base_size - left_size, x_center + base_size + right_size));
 
-            ext_2 = src_hsv(Range(y_center + base_size + up_size + step, y_center + base_size + up_size + 2.0*step), 
-                        Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-            // calculate histograms of extensions
-            calcHist( &ext_1, 1, channels, Mat(), hist_ext_1, 3, histSize, ranges, true, false );
-            normalize( hist_ext_1, hist_ext_1, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            calcHist( &ext_2, 1, channels, Mat(), hist_ext_2, 3, histSize, ranges, true, false );
-            normalize( hist_ext_2, hist_ext_2, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            // compare histograms
-            corr_1 = compareHist( hist_base, hist_ext_1, HISTCMP_CORREL );
-            corr_2 = compareHist( hist_base, hist_ext_2, HISTCMP_CORREL );
-            printf("Up: %f, %f \n",corr_1, corr_2);
-            
-            // if correlation +1 or correlation +2 greater than the threshold
-            if(corr_1 > corr_threshold || corr_2 > corr_threshold){
-                // update size
-                up_size += step;
-
-                // update base
-                base = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size),
-                           Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-                // update base histogram
-                calcHist( &base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
-                normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
-
-                // draw extended base
-                show = src.clone();
-                rectangle(show, Point(x_center - base_size - left_size, y_center + base_size + up_size), 
-                                Point(x_center + base_size + right_size, y_center - base_size - down_size), Scalar(0,0,0), 1);
-                imshow(window_name,show);
-                waitKey(100);
-            }
-            else{
-                up_flag = false;
-            }
-        }
-
-        if(right_flag){
-            //find extension +1 and +2
-            ext_1 = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size), 
-                        Range(x_center + base_size + right_size, x_center + base_size + right_size + step));
-
-            ext_2 = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size), 
-                        Range(x_center + base_size + right_size + step, x_center + base_size + right_size + 2.0*step));
-
-            // calculate histograms of extensions
-            calcHist( &ext_1, 1, channels, Mat(), hist_ext_1, 3, histSize, ranges, true, false );
-            normalize( hist_ext_1, hist_ext_1, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            calcHist( &ext_2, 1, channels, Mat(), hist_ext_2, 3, histSize, ranges, true, false );
-            normalize( hist_ext_2, hist_ext_2, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            // compare histograms
-            corr_1 = compareHist( hist_base, hist_ext_1, HISTCMP_CORREL );
-            corr_2 = compareHist( hist_base, hist_ext_2, HISTCMP_CORREL );
-            printf("Right: %f, %f \n",corr_1, corr_2);
-            
-            // if correlation +1 or correlation +2 greater than the threshold
-            if(corr_1 > corr_threshold || corr_2 > corr_threshold){
-                // update size
-                right_size += step;
-
-                // update base
-                base = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size),
-                           Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-                // update base histogram
-                calcHist( &base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
-                normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
-
-                // draw extended base
-                show = src.clone();
-                rectangle(show, Point(x_center - base_size - left_size, y_center + base_size + up_size), 
-                                Point(x_center + base_size + right_size, y_center - base_size - down_size), Scalar(0,0,0), 1);
-                imshow(window_name,show);
-                waitKey(100);
-            }
-            else{
-                right_flag = false;
-            }
-        }
-
-        if(down_flag){
-            //find extension +1 and +2
-            ext_1 = src_hsv(Range(y_center - base_size - down_size - step, y_center - base_size - down_size), 
-                        Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-            ext_2 = src_hsv(Range(y_center - base_size - down_size - 2.0*step, y_center - base_size - down_size - step), 
-                        Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-            // calculate histograms of extensions
-            calcHist( &ext_1, 1, channels, Mat(), hist_ext_1, 3, histSize, ranges, true, false );
-            normalize( hist_ext_1, hist_ext_1, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            calcHist( &ext_2, 1, channels, Mat(), hist_ext_2, 3, histSize, ranges, true, false );
-            normalize( hist_ext_2, hist_ext_2, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            // compare histograms
-            corr_1 = compareHist( hist_base, hist_ext_1, HISTCMP_CORREL );
-            corr_2 = compareHist( hist_base, hist_ext_2, HISTCMP_CORREL );
-            printf("Down: %f, %f \n",corr_1, corr_2);
-            
-            // if correlation +1 or correlation +2 greater than threshold
-            if(corr_1 > corr_threshold || corr_2 > corr_threshold){
-                // update size
-                down_size += step;
-
-                // update base
-                base = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size),
-                           Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-                // update base histogram
-                calcHist( &base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
-                normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
-
-                // draw extended base
-                show = src.clone();
-                rectangle(show, Point(x_center - base_size - left_size, y_center + base_size + up_size), 
-                                Point(x_center + base_size + right_size, y_center - base_size - down_size), Scalar(0,0,0), 1);
-                imshow(window_name,show);
-                waitKey(100);
-            }
-            else{
-                down_flag = false;
-            }
-        }
-
-        if(left_flag){
-            //find extension +1 and +2
-            ext_1 = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size), 
-                        Range(x_center - base_size - left_size - step, x_center - base_size - left_size));
-
-            ext_2 = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size), 
-                        Range(x_center - base_size - left_size - 2.0*step, x_center - base_size - left_size - step));
-
-            // calculate histograms of extensions
-            calcHist( &ext_1, 1, channels, Mat(), hist_ext_1, 3, histSize, ranges, true, false );
-            normalize( hist_ext_1, hist_ext_1, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            calcHist( &ext_2, 1, channels, Mat(), hist_ext_2, 3, histSize, ranges, true, false );
-            normalize( hist_ext_2, hist_ext_2, 0, 1, NORM_MINMAX, -1, Mat() );
-
-            // compare histograms
-            corr_1 = compareHist( hist_base, hist_ext_1, HISTCMP_CORREL );
-            corr_2 = compareHist( hist_base, hist_ext_2, HISTCMP_CORREL );
-            printf("Left: %f, %f \n",corr_1, corr_2);
-            
-            // if correlation +1 or correlation +2 greater than the threshold
-            if(corr_1 > corr_threshold || corr_2 > corr_threshold){
-                // update size
-                left_size += step;
-
-                // update base
-                base = src_hsv(Range(y_center - base_size - down_size, y_center + base_size + up_size),
-                           Range(x_center - base_size - left_size, x_center + base_size + right_size));
-
-                // update base histogram
-                calcHist( &base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
-                normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
-
-                // draw extended base
-                show = src.clone();
-                rectangle(show, Point(x_center - base_size - left_size, y_center + base_size + up_size), 
-                                Point(x_center + base_size + right_size, y_center - base_size - down_size), Scalar(0,0,0), 1);
-                imshow(window_name,show);
-                waitKey(100);
-            }
-            else{
-                left_flag = false;
-            }
-        }
-    }
-
-    waitKey(0);
+    waitKey();
     return 0;
 }

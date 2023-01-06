@@ -80,9 +80,6 @@
 
 // CONTOUR DETECTIOM: 
 
-//try this shit out:
-//https://stackoverflow.com/questions/71446868/about-opencv-approxpolydp-function-program-cant-find-rectangle-that-i-want-if
-
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -95,7 +92,7 @@ RNG rng(12345);
 void thresh_callback(int, void* );
 int main( int argc, char** argv )
 {
-    Mat src = imread("../aaa.png",IMREAD_COLOR);
+    Mat src = imread("../323102321_1972663339608618_688167511960360177_n.jpg",IMREAD_COLOR);
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
     blur( src_gray, src_gray, Size(3,3) );
     const char* source_window = "Source";
@@ -112,32 +109,15 @@ void thresh_callback(int, void* )
     Mat canny_output;
     Canny( src_gray, canny_output, thresh, thresh*2 );
     vector<vector<Point> > contours;
-    vector<vector<Point> > approx_contour;
     vector<Vec4i> hierarchy;
-    findContours( canny_output, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+    findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE );
     Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-    // // select last contour find 
-    // int i = contours.size()-1;
-    //draz all contour:
-     for( size_t i = 0; i< contours.size(); i++ ){
+    for( size_t i = 0; i< contours.size(); i++ )
+    {
         Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
-        approxPolyDP(contours[i],contours[i],100,1);
         drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
-        std::cout << contours[i].size();
-        // putText(drawing,std::to_string(contours[i].size()),center,1,3,Scalar(255,0,0),2);
-
     }
-
-    for(vector<Point>p:contours)
-        for(Point k:p)
-            circle(drawing,k,5,Scalar(255,255,255),FILLED);
-            
-
-    namedWindow("final closed image", WINDOW_NORMAL);
-    imshow("final closed image",drawing);
-    cv::resizeWindow("final closed image", 300, 300);
-    cv::waitKey(0);
-
+    imshow( "Contours", drawing );
 }
 
 

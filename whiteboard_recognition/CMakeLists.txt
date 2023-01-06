@@ -28,6 +28,10 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
   closing.cpp
   )
 
+  add_executable(detect_whiteboard
+  detect_whiteboard.cpp
+  )
+
   add_executable(closing_adaptive
   closing_adaptive.cpp
   )
@@ -76,3 +80,4 @@ target_link_libraries( closing_adaptive ${OpenCV_LIBS} )
 
 target_link_libraries( template_matching ${OpenCV_LIBS} )
 
+target_link_libraries( detect_whiteboard  ${OpenCV_LIBS} )
