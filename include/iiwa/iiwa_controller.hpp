@@ -24,8 +24,10 @@
 // KDL
 #include <chain.hpp>
 #include <frames_io.hpp>
-#include <chainfksolverpos_recursive.hpp>
-#include <chainfksolvervel_recursive.hpp>
+#include <jntarrayvel.hpp>
+
+// SPDLOG
+#include "spdlog/spdlog.h"
 
 using namespace std;
 
@@ -70,14 +72,14 @@ typedef struct iiwa_controller_params_s{
     double  local_goal_wrench[CART_VECTOR_DIM];
 
     // parameters which affect the motion specification
-    double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
-    double  jnt_jerk[LBRState::NUMBER_OF_JOINTS];
-    double  max_jnt_accel[LBRState::NUMBER_OF_JOINTS];
-    double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
-    double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
-    double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
+    // double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    // double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    // double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
+    // double  jnt_jerk[LBRState::NUMBER_OF_JOINTS];
+    // double  max_jnt_accel[LBRState::NUMBER_OF_JOINTS];
+    // double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
+    // double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
+    // double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
 
     double max_wrench_step;
 
@@ -86,6 +88,9 @@ typedef struct iiwa_controller_params_s{
     double max_wrench;
 
     abag_params_t abag_params;
+
+    // logger implemented by spdlog
+    std::shared_ptr<spdlog::logger> logger;
 }iiwa_controller_params_t;
 
 // Continuous state which is the state of the controller system, including input and output signals
@@ -115,10 +120,6 @@ typedef struct iiwa_controller_continuous_state_s{
     // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
     double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-
-    double approach_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    double approach_jnt_acc[LBRState::NUMBER_OF_JOINTS];
-    double approach_coeffs[4]; // [a0, a1, a2, a3]; a0 + a1*s + a2*s^2 + a3*s^3;
 
     // Data structures for time
     struct timespec prev_timespec;

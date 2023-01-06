@@ -7,7 +7,7 @@
 
 /**
 	* @file iiwase_demo.cpp
-	* @date November 14, 2022
+	* @date January 6th, 2023
  **/
 
 #include <stdio.h>
@@ -24,20 +24,20 @@
 
 #include "iiwa/iiwa_controller.hpp"
 #include "task_mediator/task_mediator.hpp"
-#include "data_logger.hpp"
+
+// spdlog
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 bool *deinitialisation_request;
 bool *deinit_controller;
-bool *deinit_logger;
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
 		printf("Ops.. deinitalisation request is a NULL pointer.\n");
 	}else{
-		printf("\nDeinitialising iiwa activity\n");
 		*deinitialisation_request = true;
 		*deinit_controller = true;
-		*deinit_logger = true;
 	}
 }
 
@@ -63,7 +63,6 @@ void* set_petrinet(void* activity){
 	
 	while(!(*deinitialisation_request)){
 		usleep(1000*dt);  // time in microseconds
-		printf("Time %f: \n", t);
 		if (mediator_activity->lcsm.state == RUNNING){
 			// Copying data
 			if (t < 2){
@@ -81,12 +80,11 @@ void* set_petrinet(void* activity){
 
 int main(int argc, char**argv){
 	signal(SIGINT, sigint_handler);
-	
+
 	// ### ACTIVITIES ### //     
 	activity_t iiwa_activity; 
 	activity_t iiwa_controller;
 	activity_t mediator_activity;
-	activity_t data_logger;
 
 	ec_iiwa_activity.create_lcsm(&iiwa_activity, "iiwa_activity");   
 	ec_iiwa_activity.resource_configure_lcsm(&iiwa_activity);
@@ -96,9 +94,6 @@ int main(int argc, char**argv){
 
 	ec_task_mediator.create_lcsm(&mediator_activity, "mediator_activity");
 	ec_task_mediator.resource_configure_lcsm(&mediator_activity);
-
-	ec_data_logger.create_lcsm(&data_logger, "data_logger");
-	ec_data_logger.resource_configure_lcsm(&data_logger);
 
 	// Initialize Vars: iiwa_activity
 	iiwa_activity_params_t* iiwa_activity_params = (iiwa_activity_params_t *) iiwa_activity.conf.params;
@@ -122,13 +117,6 @@ int main(int argc, char**argv){
     // Initialize Vars: task_mediator
 	task_mediator_coordination_state_t* task_coord_state = (task_mediator_coordination_state_t *) mediator_activity.state.coordination_state;
 
-	// Initialize Vars: data_logger
-	data_logger_params_t *data_logger_params = (data_logger_params_t *) data_logger.conf.params;
-	data_logger_continuous_state_t *data_logger_state = (data_logger_continuous_state_t *) data_logger.state.computational_state.continuous;
-	data_logger_coordination_state_t *data_logger_coord_state = (data_logger_coordination_state_t *) data_logger.state.coordination_state;
-
-	deinit_logger = &data_logger_coord_state->deinitialisation_request;
-
     // Share memory iiwa <--> controller
 	iiwa_controller_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
 	iiwa_controller_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
@@ -143,46 +131,40 @@ int main(int argc, char**argv){
 	iiwa_controller_continuous_state->cmd_torques = iiwa_activity_params->iiwa_params.cmd_torques;
 	iiwa_controller_continuous_state->cmd_wrench = iiwa_activity_params->iiwa_params.cmd_wrench;
 
-	// Share memory data_logger <--> iiwa
-	data_logger_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
-	data_logger_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
-	data_logger_state->iiwa_continuous_state = iiwa_activity_continuous_state;
-
-	// Share memory data_logger <--> controller
-	data_logger_coord_state->goal_lock = &iiwa_controller_coord_state->goal_lock;
-	data_logger_state->controller_continuous_state = iiwa_controller_continuous_state;
-
 	// Task <-> Controller  
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
 	// Manually 
 	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
-	data_logger_coord_state->execution_request = true;
-	data_logger_params->fname = "logging.csv";
+	iiwa_controller_coord_state->execution_request = true;
+
+	// ### LOGGING ## //
+	auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
+	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e, %n, %l, %v");
+
+	auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
+    iiwa_controller_params->logger = controller_logger;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
 	thread_t thread_iiwa_controller;
 	thread_t thread_mediator;
-	thread_t thread_logger;
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", 4); // 4 ms = 250 Hz
 	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 8);
 	create_thread(&thread_mediator, "thread_mediator", 100);
-	create_thread(&thread_logger, "thread_logger", 10);
 
 	// Register activities in threads
 	register_activity(&thread_iiwa, &iiwa_activity, "iiwa_activity");
 	register_activity(&thread_iiwa_controller, &iiwa_controller, "iiwa_controller");
 	register_activity(&thread_mediator, &mediator_activity, "mediator_activity");
-	register_activity(&thread_logger, &data_logger, "data_logger");
 
 	// ### SHARED MEMORY ### //
 
 	// Create POSIX threads   
-	pthread_t pthread_iiwa, pthread_iiwa_controller, pthread_mediator, pthread_petrinet, pthread_logger;
+	pthread_t pthread_iiwa, pthread_iiwa_controller, pthread_mediator, pthread_petrinet;
 
 	// Initialize the Mutex
 	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
@@ -191,21 +173,22 @@ int main(int argc, char**argv){
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
-	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
-	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
-	pthread_create( &pthread_logger, NULL, do_thread_loop, ((void*) &thread_logger));
+	// pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
+	// pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
+	printf("here now");
 	pthread_join(pthread_iiwa, NULL);
+	printf("here");
 	pthread_join(pthread_iiwa_controller, NULL);
-	pthread_join(pthread_logger, NULL);
-	pthread_join(pthread_mediator, NULL);
-	pthread_join(pthread_petrinet, NULL);
+	// pthread_join(pthread_mediator, NULL);
+	// pthread_join(pthread_petrinet, NULL);
 	
 	// Freeing memory
+	printf("starting destroy lcsm");
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
+	printf("iiwa_activity lcsm destroyed \n");
 	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
-	ec_data_logger.destroy_lcsm(&data_logger);
-	ec_task_mediator.destroy_lcsm(&mediator_activity);
+	// ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;
 }

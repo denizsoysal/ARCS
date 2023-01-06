@@ -10,28 +10,26 @@
  * @date September 15, 2022
  **/
 
-#include "string.h"
+// Basic utilities
+#include <string.h>
 #include <time.h>
 #include <math.h>
-
-#include "iiwa/iiwa_controller.hpp"
-#include <iostream>
-
-#include <chain.hpp>
-#include <chainiksolver.hpp>
-#include <chainfksolverpos_recursive.hpp>
-#include <frames_io.hpp>
 #include <stdio.h>
 #include <iostream>
 
-#include <chainidsolver_recursive_newton_euler.hpp>
+// Orocos KDL
+#include <chain.hpp>
 #include <models.hpp>
+#include <chainfksolverpos_recursive.hpp>
+#include <chainfksolvervel_recursive.hpp>
+#include <chainiksolver.hpp>
+#include <chainidsolver_recursive_newton_euler.hpp>
+
+// iiwa controller
+#include "iiwa/iiwa_controller.hpp"
 
 KDL::Chain iiwa_robot_kdl=KDL::KukaIIWA14();
-
 // Vector gravity = Vector(0.0,0.0,-9.81);
-
-// Forward Kinematics Solver
 KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot_kdl);
 KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot_kdl);
 
@@ -140,13 +138,12 @@ void iiwa_controller_cleaning(activity_t *activity){
     iiwa_controller_cleaning_compute(activity);
     iiwa_controller_cleaning_coordinate(activity);
     iiwa_controller_cleaning_configure(activity);
+	printf("finished cleaning\n");
 }
 
 // capability configuration
 void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
 	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
-	// if (coord_state->execution_request)
-	// 	activity->state.lcsm_protocol = EXECUTION;
 	if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
 
@@ -198,6 +195,8 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		cts_state->abag_state.control = 0.0;
 		cts_state->abag_state.ek_bar = 0.0;
 	}
+
+	params->logger->info("Capability configuration");
 }
 
 void iiwa_controller_capability_configuration_compute(activity_t *activity){
@@ -387,7 +386,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 				continuous_state->local_cmd_wrench[i] = 0.0;
 			}
 			continuous_state->local_cmd_wrench[2] = params->max_wrench * continuous_state->abag_state.control; 
-			printf("In wrench control, cmd: %f \n", continuous_state->local_cmd_wrench[2]);
+			// spdlog::info("In Wrench Control: {}", continuous_state->local_cmd_wrench[2]);
 			break;
 		}
 		case(TORQUE):

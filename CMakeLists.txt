@@ -29,6 +29,13 @@ message(STATUS ${EIGEN3_INCLUDE_DIR})
 set(BUILD_MODELS ON CACHE BOOL "Build kdl models")
 add_subdirectory(external/orocos_kdl)
 
+# spdlog tool
+if(NOT TARGET spdlog)
+    # Stand-alone build
+    find_package(spdlog REQUIRED)
+endif()
+
+
 # ROB-KUL libraries
 # FIVE C
 include(FetchContent)
@@ -76,7 +83,7 @@ FetchContent_GetProperties(iiwa-aacal
 set(IIWA_AACAL_INCLUDE_DIR ${IIWA_AACAL_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
-    src/data_logger.cpp
+    # src/data_logger.cpp
     src/iiwa/iiwa_controller.cpp
     src/iiwa/iiwa_virtual.cpp
     src/task_mediator/task_mediator.cpp
@@ -107,6 +114,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     five_c
     coordination_libraries
     iiwa_aacal
+    spdlog::spdlog_header_only
     PUBLIC orocos-kdl orocos-kdl-models
 )
 
@@ -118,6 +126,7 @@ if(STAND_ALONE)
         five_c
         coordination_libraries
         iiwa_aacal
+        spdlog::spdlog_header_only
         PUBLIC orocos-kdl orocos-kdl-models
         )    
 endif()
