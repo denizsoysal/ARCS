@@ -131,6 +131,9 @@ void iiwa_controller_cleaning_configure(activity_t *activity){
 }
 
 void iiwa_controller_cleaning_compute(activity_t *activity){
+	iiwa_controller_params_t *params = (iiwa_controller_params_t*) activity->conf.params;
+	// flush the logger to ensure all data is written
+	params->logger->flush();
     activity->state.lcsm_flags.deletion_complete = true;
 }
 
@@ -386,6 +389,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 				continuous_state->local_cmd_wrench[i] = 0.0;
 			}
 			continuous_state->local_cmd_wrench[2] = params->max_wrench * continuous_state->abag_state.control; 
+			params->logger->info("wrench_z, {}", continuous_state->local_cmd_wrench[2]);
 			// spdlog::info("In Wrench Control: {}", continuous_state->local_cmd_wrench[2]);
 			break;
 		}

@@ -140,6 +140,7 @@ int main(int argc, char**argv){
 	iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
+	spdlog::info("start of logging");
 	auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
 	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e, %n, %l, %v");
 
@@ -177,17 +178,13 @@ int main(int argc, char**argv){
 	// pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
-	printf("here now");
 	pthread_join(pthread_iiwa, NULL);
-	printf("here");
 	pthread_join(pthread_iiwa_controller, NULL);
 	// pthread_join(pthread_mediator, NULL);
 	// pthread_join(pthread_petrinet, NULL);
 	
 	// Freeing memory
-	printf("starting destroy lcsm");
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
-	printf("iiwa_activity lcsm destroyed \n");
 	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
 	// ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;

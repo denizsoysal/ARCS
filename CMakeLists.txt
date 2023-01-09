@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.13.0)
 project(iiwase VERSION 0.0.1 LANGUAGES C CXX)
 
 message(STATUS ${CMAKE_CURRENT_SOURCE_DIR}) ##This is to print the status during the cmake
@@ -29,16 +29,27 @@ message(STATUS ${EIGEN3_INCLUDE_DIR})
 set(BUILD_MODELS ON CACHE BOOL "Build kdl models")
 add_subdirectory(external/orocos_kdl)
 
-# spdlog tool
-if(NOT TARGET spdlog)
-    # Stand-alone build
-    find_package(spdlog REQUIRED)
-endif()
+include(FetchContent)
 
+# SPDLOG
+# FetchContent_Declare(spdlog
+#     GIT_REPOSITORY https://github.com/gabime/spdlog.git
+#     GIT_TAG v1.x
+#     TIMEOUT 5
+#     CMAKE_ARGS
+#         -DSPDLOG_BUILD_SHARED=ON
+#     BUILD_COMMAND make
+#     INSTALL_COMMAND ""
+# )
+# FetchContent_MakeAvailable(spdlog)
+# FetchContent_GetProperties(spdlog
+#     SOURCE_DIR SPDLOG_SOURCE_DIR
+#     BINARY_DIR SPDLOG_BINARY_DIR
+# )
+# set(SPDLOG_INCLUDE_DIR ${SPDLOG_SOURCE_DIR}/include)
 
 # ROB-KUL libraries
 # FIVE C
-include(FetchContent)
 FetchContent_Declare(five-c
     GIT_REPOSITORY git@gitlab.kuleuven.be:u0144428/algorithm_and_activity_component_architecture.git
     GIT_TAG repo/organization
@@ -102,34 +113,35 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/models>
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/src>
         $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
+        ${${PROJECT_NAME}_SOURCE_DIR}/external/spdlog/include/
 )
 
 target_link_directories(${PROJECT_NAME}
     PUBLIC
         ${COORDINATON_LIBRARIES_BUILD_DIR}
         ${IIWA_AACAL_BUILD_DIR}
+        ${CMAKE_SOURCE_DIR}/external/spdlog/build
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     five_c
     coordination_libraries
     iiwa_aacal
-    spdlog::spdlog_header_only
+    pthread
+    spdlog
     PUBLIC orocos-kdl orocos-kdl-models
 )
 
-if(STAND_ALONE)
-    add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
-    target_link_libraries(iiwase_demo PRIVATE
-        ${PROJECT_NAME}
-        pthread
-        five_c
-        coordination_libraries
-        iiwa_aacal
-        spdlog::spdlog_header_only
-        PUBLIC orocos-kdl orocos-kdl-models
-        )    
-endif()
+add_executable(iiwase_demo src/demo/iiwase_demo.cpp)
+target_link_libraries(iiwase_demo PRIVATE
+    ${PROJECT_NAME}
+    five_c
+    coordination_libraries
+    iiwa_aacal
+    pthread
+    spdlog
+    PUBLIC orocos-kdl orocos-kdl-models
+)    
 
 
 #############
