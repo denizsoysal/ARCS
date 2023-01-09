@@ -31,7 +31,7 @@ add_subdirectory(external/orocos_kdl)
 
 include(FetchContent)
 
-# SPDLOG
+# SPDLOG (other way to do it, but not working consistently)
 # FetchContent_Declare(spdlog
 #     GIT_REPOSITORY https://github.com/gabime/spdlog.git
 #     GIT_TAG v1.x
@@ -94,7 +94,6 @@ FetchContent_GetProperties(iiwa-aacal
 set(IIWA_AACAL_INCLUDE_DIR ${IIWA_AACAL_SOURCE_DIR}/include)
 
 add_library(${PROJECT_NAME} SHARED
-    # src/data_logger.cpp
     src/iiwa/iiwa_controller.cpp
     src/iiwa/iiwa_virtual.cpp
     src/task_mediator/task_mediator.cpp
