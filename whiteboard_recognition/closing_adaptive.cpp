@@ -55,7 +55,7 @@ int main( int argc, char** argv )
   cv::Mat src, image, sum, squared_diff, image_blurred, absolute_diff, closed_image, closed_image_blurred;
   
   //read image
-  image = imread("../322915141_1210091463221811_7344717193191901619_n.jpg",IMREAD_COLOR);
+  image = imread("../test_2.jpg",IMREAD_COLOR);
 
   //apply median blur 
   // medianBlur(src,image,33);
