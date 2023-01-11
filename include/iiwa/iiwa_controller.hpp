@@ -121,6 +121,12 @@ typedef struct iiwa_controller_continuous_state_s{
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
     double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 
+    // Variables for the averaging of the position measurements
+    double jnt_pos_buffer[5][LBRState::NUMBER_OF_JOINTS]; //5 is the size of the averaging window, it might be modified
+    int avg_buffer_ind;
+    double jnt_pos_avg[LBRState::NUMBER_OF_JOINTS];
+    double jnt_pos_prev_avg[LBRState::NUMBER_OF_JOINTS];
+
     // Data structures for time
     struct timespec prev_timespec;
     struct timespec current_timespec;
