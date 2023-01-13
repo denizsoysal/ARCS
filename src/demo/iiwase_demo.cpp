@@ -137,7 +137,7 @@ int main(int argc, char**argv){
 	// Manually 
 	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
-	iiwa_controller_coord_state->execution_request = true;
+	//iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
 	spdlog::info("start of logging");
@@ -174,18 +174,18 @@ int main(int argc, char**argv){
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
-	// pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
-	// pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
+	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
+	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);
 	pthread_join(pthread_iiwa_controller, NULL);
-	// pthread_join(pthread_mediator, NULL);
-	// pthread_join(pthread_petrinet, NULL);
+	pthread_join(pthread_mediator, NULL);
+	pthread_join(pthread_petrinet, NULL);
 	
 	// Freeing memory
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
 	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
-	// ec_task_mediator.destroy_lcsm(&mediator_activity);
+	ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;
 }

@@ -154,6 +154,8 @@ typedef struct iiwa_controller_coordination_state_s {
 
     // First run compute cycle
     bool first_run_compute_cycle;
+    //first read of the sensors
+    bool buffer_initialized;
 } iiwa_controller_coordination_state_t;
 
 extern const iiwa_controller_t ec_iiwa_controller;

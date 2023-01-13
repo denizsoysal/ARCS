@@ -199,12 +199,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		cts_state->abag_state.control = 0.0;
 		cts_state->abag_state.ek_bar = 0.0;
 
-		// The buffer used for the averaging of the measurements should be set to the correct measurements
-		pthread_mutex_lock(coord_state->sensor_lock);
-		for (unsigned int i=0;i<5;i++){
-			memcpy(cts_state->jnt_pos_buffer[i], cts_state->meas_jnt_pos, sizeof(cts_state->meas_jnt_pos));
-		}
-		pthread_mutex_unlock(coord_state->sensor_lock);
+		coord_state->buffer_initialized = false;
 	}
 
 	params->logger->info("Capability configuration");
@@ -298,6 +293,14 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	memcpy(state->jnt_pos_buffer[state->avg_buffer_ind], state->local_meas_jnt_pos, sizeof(state->local_cmd_jnt_vel));
 	//state->jnt_pos_buffer[state->avg_buffer_ind] = state->local_meas_jnt_pos;
 	state->avg_buffer_ind = (state->avg_buffer_ind+1)%5;
+
+	// The buffer is completely filled if it is the first iteration
+	if (coord_state->buffer_initialized == false){
+		for (unsigned int i=0;i<5;i++){
+			memcpy(state->jnt_pos_buffer[i], state->local_meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
+		}
+		coord_state->buffer_initialized = true;
+	}	
 }
 
 void iiwa_controller_running_communicate_write(activity_t *activity){
