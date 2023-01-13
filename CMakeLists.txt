@@ -112,14 +112,14 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/models>
         $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external/orocos_kdl/src>
         $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}>
-        ${${PROJECT_NAME}_SOURCE_DIR}/external/spdlog/include/
+        ${${PROJECT_NAME}_SOURCE_DIR}/external/spdlog/
 )
 
 target_link_directories(${PROJECT_NAME}
     PUBLIC
         ${COORDINATON_LIBRARIES_BUILD_DIR}
         ${IIWA_AACAL_BUILD_DIR}
-        ${CMAKE_SOURCE_DIR}/external/spdlog/build
+        ${CMAKE_SOURCE_DIR}/external/spdlog/
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
