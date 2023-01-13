@@ -252,18 +252,66 @@ cv::Mat detect_contour(cv::Mat segmented_image)
     waitKey();
     return drawing;
 
-
-
 }
 
 
+cv::Mat histogram_change_detect(cv::Mat input_to_detect)
+{
+  //this function detect big changes in the histogram
+  //we apply a mask to the image each time to only consider a subset of the image
+  //we compute the histogram
+  //we move the mask 
+  //we look at the difference 
+
+  const char* window_name = "Region Growing";
+    namedWindow( window_name, WINDOW_NORMAL );
+  cv::resizeWindow(window_name, 300, 300);
+
+  //first define the masked input 
+  Mat masked, mask, second_mask, second_masked, diff, squared, sum_squared;
+  mask = cv::Mat::zeros(input_to_detect.size(), CV_8U); // all 0
+  second_mask = cv::Mat::zeros(input_to_detect.size(), CV_8U); // all 0
+  //we start at the middle of the image (input_to_detect.size().width)/2, (input_to_detect.size().height)/2
+  //and draw a rectange of the size of the image divided by 30
+  int i;
+  int size = 50;
+  //loop for different kernel size (i) until we reach a plateau (minimum) 
+  //in term of loss (non-homogenity)
+  for(i=0; i<=(input_to_detect.size().height)/2; i++){
+    int b = i%2;
+    if ( b == 0 ){
+      std::cout << "ok";
+      mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+      second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+      //now we apply the mask on the image
+      input_to_detect.copyTo(masked, mask);
+      //now we apply the mask on the image
+      input_to_detect.copyTo(second_masked, second_mask);
+      imshow(window_name, masked);
+      waitKey();
+
+    }
+
+      absdiff(masked, second_masked, diff); 	
+      //squared diff
+      squared = diff.mul(diff);
+      //compute sum 
+      double sum_squared = cv::sum(cv::sum(diff))[0];
+      std::cout << "loss: " << sum_squared << "\n";
+      
+
+  }
+  return masked;
+}
 
 
 int main( int argc, char** argv )
 { 
     cv::Mat closed_image = adaptive_median_filtering("../323928745_1183154885902175_2448762449208961810_n.jpg");
+    cv::Mat detected =  histogram_change_detect(closed_image);
+
     // cv::Mat image_after_otsu =  segment_otsu(closed_image);
     // imwrite("../allonsons.jpg",image_after_otsu);
-    cv::Mat detected_contour = detect_contour(closed_image);
+    // cv::Mat detected_contour = detect_contour(closed_image);
 }
 
