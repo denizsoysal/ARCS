@@ -40,6 +40,7 @@ P.S.2 : AS A HOMOGENEOUS METRIC, FFT CAN ALSO BE CONSIDERED
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
 #include <cmath>
 #include <iostream>
 #include <stdio.h>
@@ -124,12 +125,145 @@ cv::Mat segment_otsu(cv::Mat image_to_segment)
   return img_thresh_dilated_eroded;
 }
 
+cv::Mat detect_contour(cv::Mat segmented_image)
+{
+    const char* window_name = "Region Growing";
+    namedWindow( window_name, WINDOW_NORMAL );
+  cv::resizeWindow(window_name, 300, 300);
+
+
+    Mat src_gray, sobelx, sobely;
+    RNG rng(12345);
+    cvtColor( segmented_image, src_gray, COLOR_BGR2GRAY );
+    blur( src_gray, src_gray, Size(3,3) );
+    const char* source_window = "Source";
+
+    //canny
+    Mat canny_output;
+    Canny( src_gray, canny_output, 30 , 60 );
+
+    //sobel
+    Sobel(src_gray, sobelx, CV_64F, 1, 0, 3);
+    Sobel(src_gray, sobely, CV_64F, 0, 1, 3);
+    Mat abs_grad_x;
+    Mat abs_grad_y; 
+    convertScaleAbs(sobelx,abs_grad_x);
+    convertScaleAbs(sobely, abs_grad_y);
+
+    Mat grad;
+    addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0,grad);
+
+    Mat grad_blurred;
+    GaussianBlur(grad, grad_blurred, Size(11, 11), 0);
+
+
+    imshow(window_name,grad_blurred);
+    waitKey();
+
+
+    //we find the contour in a tree hierarchy
+    vector<vector<Point> > contours;
+    vector<vector<Point> > approx_contour;
+    vector<Vec4i> hierarchy;
+    findContours( grad_blurred, contours, hierarchy, cv::RETR_EXTERNAL, CHAIN_APPROX_NONE );
+    Mat drawing = Mat::zeros( grad_blurred.size(), CV_8UC3 );
+
+
+
+    //draz all contour:
+     for( size_t i = 0; i< contours.size(); i++ ){
+        Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+        approxPolyDP(contours[i],contours[i],100,1);
+        drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+        std::cout << contours[i].size();
+        // putText(drawing,std::to_string(contours[i].size()),center,1,3,Scalar(255,0,0),2);
+
+    }
+
+    //blob detection
+    // Setup SimpleBlobDetector parameters.
+    SimpleBlobDetector::Params params;
+
+    // Change thresholds
+    params.minThreshold = 10;
+    params.maxThreshold = 200;
+
+    // Filter by Area.
+    params.filterByArea = true;
+    params.minArea = 100;
+
+    // Filter by Circularity
+    params.filterByCircularity = true;
+    params.minCircularity = 0.1;
+
+    // Filter by Convexity
+    params.filterByConvexity = true;
+    params.minConvexity = 0.87;
+
+    // Filter by Inertia
+    params.filterByInertia = true;
+    params.minInertiaRatio = 0.01;
+
+    // Storage for blobs
+    std::vector<KeyPoint> keypoints;
+
+#if CV_MAJOR_VERSION < 3   // If you are using OpenCV 2
+
+    // Set up detector with params
+    SimpleBlobDetector detector(params);
+
+    // Detect blobs
+    detector.detect(drawing, keypoints);
+#else 
+
+    // Set up detector with params
+    Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
+
+    // Detect blobs
+    detector->detect(drawing, keypoints);
+#endif 
+
+    // Draw detected blobs as red circles.
+    // DrawMatchesFlags::DRAW_RICH_KEYPOINTS flag ensures
+    // the size of the circle corresponds to the size of blob
+
+    Mat im_with_keypoints;
+    drawKeypoints(drawing, keypoints, im_with_keypoints, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+
+
+
+    // //we consider the whiteboard being in the inner contour
+    // //so we take the last contour in our contour hierarchy
+    // int i = contours.size()-1;
+    // Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+    // approxPolyDP(contours[i],contours[i],100,1);
+    // drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+    // std::cout << contours[i].size();
+
+    //now apply blob detection to find the biggest black region in the image 
+    //based on this:
+    //https://learnopencv.com/blob-detection-using-opencv-python-c/
+
+    namedWindow("final closed image", WINDOW_NORMAL);
+    imshow("final closed image",im_with_keypoints);
+    cv::resizeWindow("final closed image", 300, 300);
+    cv::waitKey(0);
+    waitKey();
+    return drawing;
+
+
+
+}
+
 
 
 
 int main( int argc, char** argv )
 { 
     cv::Mat closed_image = adaptive_median_filtering("../323928745_1183154885902175_2448762449208961810_n.jpg");
-    cv::Mat image_after_otsu =  segment_otsu(closed_image);
+    // cv::Mat image_after_otsu =  segment_otsu(closed_image);
+    // imwrite("../allonsons.jpg",image_after_otsu);
+    cv::Mat detected_contour = detect_contour(closed_image);
 }
 
