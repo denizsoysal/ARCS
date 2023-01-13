@@ -169,6 +169,7 @@ void iiwa_controller_capability_configuration_coordinate(activity_t *activity){
 void iiwa_controller_capability_configuration_configure(activity_t *activity){
 	iiwa_controller_params_t *params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
 	if (activity->lcsm.state != CAPABILITY_CONFIGURATION){
 		// Update schedule
@@ -197,6 +198,13 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		cts_state->abag_state.gain = 0.0;
 		cts_state->abag_state.control = 0.0;
 		cts_state->abag_state.ek_bar = 0.0;
+
+		// The buffer used for the averaging of the measurements should be set to the correct measurements
+		pthread_mutex_lock(coord_state->sensor_lock);
+		for (unsigned int i=0;i<5;i++){
+			memcpy(cts_state->jnt_pos_buffer[i], cts_state->meas_jnt_pos, sizeof(cts_state->meas_jnt_pos));
+		}
+		pthread_mutex_unlock(coord_state->sensor_lock);
 	}
 
 	params->logger->info("Capability configuration");
@@ -378,6 +386,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		// continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
 		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 
+		//this is not working
 		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->jnt_pos_avg[i], continuous_state->jnt_pos_prev_avg[i],
 		    (double) continuous_state->cycle_time_us / 1000000.0);
 		
