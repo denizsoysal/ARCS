@@ -264,7 +264,7 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
   //we look at the difference 
 
   const char* window_name = "Region Growing";
-    namedWindow( window_name, WINDOW_NORMAL );
+  namedWindow( window_name, WINDOW_NORMAL );
   cv::resizeWindow(window_name, 300, 300);
 
   //first define the masked input 
@@ -274,31 +274,76 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
   //we start at the middle of the image (input_to_detect.size().width)/2, (input_to_detect.size().height)/2
   //and draw a rectange of the size of the image divided by 30
   int i;
-  int size = 50;
+  int size = 40;
   //loop for different kernel size (i) until we reach a plateau (minimum) 
   //in term of loss (non-homogenity)
-  for(i=0; i<=(input_to_detect.size().height)/2; i++){
+  for(i=0; i<=20; i++){
+
+    //create an array of 2 elements: previous diff, current diff
+    double diff_array [2];
+
     int b = i%2;
-    if ( b == 0 ){
-      std::cout << "ok";
+    if (b < 1000){
+      cout << "the value of i is:" << i << "\n";
       mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
       second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
       //now we apply the mask on the image
       input_to_detect.copyTo(masked, mask);
       //now we apply the mask on the image
       input_to_detect.copyTo(second_masked, second_mask);
-      imshow(window_name, masked);
+      imshow(window_name, second_masked);
       waitKey();
 
-    }
-
-      absdiff(masked, second_masked, diff); 	
-      //squared diff
-      squared = diff.mul(diff);
-      //compute sum 
-      double sum_squared = cv::sum(cv::sum(diff))[0];
-      std::cout << "loss: " << sum_squared << "\n";
       
+      // instead of pixel wise as here, do it with histogram comparison:
+      // https://docs.opencv.org/3.4/d8/dc8/tutorial_histogram_comparison.html
+
+      //first go to HSV spac
+      Mat hsv_masked, hsv_second_masked;
+      cvtColor( masked, hsv_masked, COLOR_BGR2HSV );
+      cvtColor( second_masked, hsv_second_masked, COLOR_BGR2HSV );
+
+      int h_bins = 50, s_bins = 60;
+      int histSize[] = { h_bins, s_bins };
+      // hue varies from 0 to 179, saturation from 0 to 255
+      float h_ranges[] = { 0, 180 };
+      float s_ranges[] = { 0, 256 };
+      const float* ranges[] = { h_ranges, s_ranges };
+      // Use the 0-th and 1-st channels
+      int channels[] = { 0, 1 };
+      Mat hist_masked, hist_second_masked;
+
+      calcHist( &hsv_masked, 1, channels, Mat(), hist_masked, 2, histSize, ranges, true, false );
+      normalize( hist_masked, hist_masked, 0, 1, NORM_MINMAX, -1, Mat() );
+      calcHist( &hsv_second_masked, 1, channels, Mat(), hist_second_masked, 2, histSize, ranges, true, false );
+      normalize( hist_second_masked, hist_second_masked, 0, 1, NORM_MINMAX, -1, Mat() );
+
+      double diff = compareHist( hist_second_masked, hist_masked, 1);
+      cout << "value of diff is" <<  diff << "\n";
+
+      //store intial diff
+      if(i==0){
+        diff_array[0] = diff;
+      }
+
+      //add this loss as current loss
+      diff_array[1] = diff;
+      //compute ratio between current loss and previous loss
+      std::cout << diff_array[1] << " and: " << diff_array[0] << "\n";
+      double ratio = diff_array[1] / diff_array[0];
+      std::cout << "loss improvement is: " << ratio << "\n";
+      //if this ratio is higher than 0.8, this means that we don't improve a lot
+      //this threshold is user-defined
+      if(i>0 and ratio < 0.5){
+        std::cout << "Loss plateau reached !" << "\n";
+        break;
+      }
+      //if ratio threshold not reached, add this loss as previous loss
+      diff_array[0] = diff;
+
+
+      }
+
 
   }
   return masked;
@@ -307,7 +352,7 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
 
 int main( int argc, char** argv )
 { 
-    cv::Mat closed_image = adaptive_median_filtering("../323928745_1183154885902175_2448762449208961810_n.jpg");
+    cv::Mat closed_image = adaptive_median_filtering("../322915141_1210091463221811_7344717193191901619_n.jpg");
     cv::Mat detected =  histogram_change_detect(closed_image);
 
     // cv::Mat image_after_otsu =  segment_otsu(closed_image);
