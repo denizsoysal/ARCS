@@ -89,7 +89,7 @@ cv::Mat adaptive_median_filtering(std::string path_to_img)
     std::cout << "loss improvement is: " << 1/ratio << "\n";
     //if this ratio is higher than 0.8, this means that we don't improve a lot
     //this threshold is user-defined
-      if(i>0 and ratio > 0.96){
+      if(i>0 and ratio > 0.98){
       std::cout << "Loss plateau reached !" << "\n";
       std::cout<< "Final 'i' is:" << i << "\n" << "Final kernel size is then:" << 2*i+1 << "\n";
       imwrite("test.jpg", closed_image); // A JPG FILE IS BEING SAVED
@@ -277,72 +277,74 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
   int size = 40;
   //loop for different kernel size (i) until we reach a plateau (minimum) 
   //in term of loss (non-homogenity)
+
+  //create an array of 2 elements: previous diff, current diff
+  double diff_array [2];
+  
   for(i=0; i<=20; i++){
 
-    //create an array of 2 elements: previous diff, current diff
-    double diff_array [2];
 
-    int b = i%2;
-    if (b < 1000){
-      cout << "the value of i is:" << i << "\n";
-      mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
-      second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
-      //now we apply the mask on the image
-      input_to_detect.copyTo(masked, mask);
-      //now we apply the mask on the image
-      input_to_detect.copyTo(second_masked, second_mask);
-      imshow(window_name, second_masked);
-      waitKey();
+    cout << "the value of i is:" << i << "\n";
+    mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+    second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+    //now we apply the mask on the image
+    input_to_detect.copyTo(masked, mask);
+    //now we apply the mask on the image
+    input_to_detect.copyTo(second_masked, second_mask);
+    imshow(window_name, second_masked);
+    waitKey();
 
-      
-      // instead of pixel wise as here, do it with histogram comparison:
-      // https://docs.opencv.org/3.4/d8/dc8/tutorial_histogram_comparison.html
+    
+    // instead of pixel wise as here, do it with histogram comparison:
+    // https://docs.opencv.org/3.4/d8/dc8/tutorial_histogram_comparison.html
 
-      //first go to HSV spac
-      Mat hsv_masked, hsv_second_masked;
-      cvtColor( masked, hsv_masked, COLOR_BGR2HSV );
-      cvtColor( second_masked, hsv_second_masked, COLOR_BGR2HSV );
+    //first go to HSV spac
+    Mat hsv_masked, hsv_second_masked;
+    cvtColor( masked, hsv_masked, COLOR_BGR2HSV );
+    cvtColor( second_masked, hsv_second_masked, COLOR_BGR2HSV );
 
-      int h_bins = 50, s_bins = 60;
-      int histSize[] = { h_bins, s_bins };
-      // hue varies from 0 to 179, saturation from 0 to 255
-      float h_ranges[] = { 0, 180 };
-      float s_ranges[] = { 0, 256 };
-      const float* ranges[] = { h_ranges, s_ranges };
-      // Use the 0-th and 1-st channels
-      int channels[] = { 0, 1 };
-      Mat hist_masked, hist_second_masked;
+    int h_bins = 50, s_bins = 60;
+    int histSize[] = { h_bins, s_bins };
+    // hue varies from 0 to 179, saturation from 0 to 255
+    float h_ranges[] = { 0, 180 };
+    float s_ranges[] = { 0, 256 };
+    const float* ranges[] = { h_ranges, s_ranges };
+    // Use the 0-th and 1-st channels
+    int channels[] = { 0, 1 };
+    Mat hist_masked, hist_second_masked;
 
-      calcHist( &hsv_masked, 1, channels, Mat(), hist_masked, 2, histSize, ranges, true, false );
-      normalize( hist_masked, hist_masked, 0, 1, NORM_MINMAX, -1, Mat() );
-      calcHist( &hsv_second_masked, 1, channels, Mat(), hist_second_masked, 2, histSize, ranges, true, false );
-      normalize( hist_second_masked, hist_second_masked, 0, 1, NORM_MINMAX, -1, Mat() );
+    calcHist( &hsv_masked, 1, channels, Mat(), hist_masked, 2, histSize, ranges, true, false );
+    normalize( hist_masked, hist_masked, 0, 1, NORM_MINMAX, -1, Mat() );
+    calcHist( &hsv_second_masked, 1, channels, Mat(), hist_second_masked, 2, histSize, ranges, true, false );
+    normalize( hist_second_masked, hist_second_masked, 0, 1, NORM_MINMAX, -1, Mat() );
 
-      double diff = compareHist( hist_second_masked, hist_masked, 1);
-      cout << "value of diff is" <<  diff << "\n";
+    float diff = compareHist( hist_second_masked, hist_masked, 1);
+    cout << "value of diff is" <<  diff << "\n";
 
-      //store intial diff
-      if(i==0){
-        diff_array[0] = diff;
-      }
-
-      //add this loss as current loss
+    //store intial diff
+    if(i==0){
       diff_array[1] = diff;
-      //compute ratio between current loss and previous loss
-      std::cout << diff_array[1] << " and: " << diff_array[0] << "\n";
-      double ratio = diff_array[1] / diff_array[0];
-      std::cout << "loss improvement is: " << ratio << "\n";
-      //if this ratio is higher than 0.8, this means that we don't improve a lot
-      //this threshold is user-defined
-      if(i>0 and ratio < 0.5){
-        std::cout << "Loss plateau reached !" << "\n";
-        break;
-      }
-      //if ratio threshold not reached, add this loss as previous loss
-      diff_array[0] = diff;
+    }
 
+    //add this loss as current loss
+    diff_array[2] = diff;
+    std::cout << diff_array[1] << " and: " << diff_array[2] << "\n";
+    //compute ratio between current loss and previous loss
+    float ratio = diff_array[2] / diff_array[1];
+    std::cout << "loss is: " << ratio << "\n";
+    diff_array[1] = diff;
+    //if this ratio is higher than 0.8, this means that we don't improve a lot
+    //this threshold is user-defined
+    if(i>3 and ratio > 1.3){
+      std::cout << "Loss plateau reached !" << "\n";
+      imshow(window_name,second_masked);
+      waitKey();
+      break;
+    }
+    //if ratio threshold not reached, add this loss as previous loss
+    
+    
 
-      }
 
 
   }
