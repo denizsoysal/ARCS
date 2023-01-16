@@ -255,13 +255,16 @@ cv::Mat detect_contour(cv::Mat segmented_image)
 }
 
 
-cv::Mat histogram_change_detect(cv::Mat input_to_detect)
+double* histogram_change_detect(cv::Mat input_to_detect)
 {
   //this function detect big changes in the histogram
   //we apply a mask to the image each time to only consider a subset of the image
   //we compute the histogram
   //we move the mask 
   //we look at the difference 
+
+  //this function return the address of the double array storing the coordinate of the
+  //detected mask
 
   const char* window_name = "Region Growing";
   namedWindow( window_name, WINDOW_NORMAL );
@@ -340,6 +343,7 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
       imshow(window_name,second_masked);
       waitKey();
       break;
+
     }
     //if ratio threshold not reached, add this loss as previous loss
     
@@ -348,15 +352,37 @@ cv::Mat histogram_change_detect(cv::Mat input_to_detect)
 
 
   }
-  return masked;
+
+
+  //we declare the array as static
+  static double coord_array [4];
+  coord_array[0] = ((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size;
+  coord_array[1] = ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size;
+
+  return coord_array;
 }
 
 
 int main( int argc, char** argv )
 { 
-    cv::Mat closed_image = adaptive_median_filtering("../322915141_1210091463221811_7344717193191901619_n.jpg");
-    cv::Mat detected =  histogram_change_detect(closed_image);
+    const char* window_name = "Region Growing";
+    namedWindow( window_name, WINDOW_NORMAL );
+    cv::resizeWindow(window_name, 300, 300);
 
+
+    cv::Mat closed_image = adaptive_median_filtering("../322915141_1210091463221811_7344717193191901619_n.jpg");
+    //get address of coordinate:
+    double* detected;
+    detected =  histogram_change_detect(closed_image);
+
+    Point center(detected[0] , detected[1]);//Declaring the center point
+    int radius = 10; //Declaring the radius
+    Scalar line_Color(0, 0, 0);//Color of the circle
+    int thickness = 2;//thickens of the line
+    circle(closed_image, center,radius, line_Color, thickness);//Using circle()function to draw the line//
+    imshow(window_name, closed_image);//Showing the circle//
+    waitKey();
+    std::cout << detected[0] << "  " << detected[1] << "  "  ;
     // cv::Mat image_after_otsu =  segment_otsu(closed_image);
     // imwrite("../allonsons.jpg",image_after_otsu);
     // cv::Mat detected_contour = detect_contour(closed_image);
