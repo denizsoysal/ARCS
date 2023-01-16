@@ -17,7 +17,6 @@
 
 // ACCAL
 #include <five_c/activity/activity.h>
-
 #include "iiwa_client.hpp"
 #include "iiwa_interface.hpp"
 

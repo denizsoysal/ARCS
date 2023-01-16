@@ -115,7 +115,6 @@ void iiwa_controller_creation(activity_t *activity){
 
 // Cleaning
 void iiwa_controller_cleaning_coordinate(activity_t *activity){
-    iiwa_controller_coordination_state_t * coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
     // Coordinating own activity
     if (activity->state.lcsm_flags.deletion_complete)
         activity->lcsm.state = DONE;
