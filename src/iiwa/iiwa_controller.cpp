@@ -367,31 +367,31 @@ void iiwa_controller_running_compute(activity_t *activity){
 		    sizeof(continuous_state->current_timespec));
 	}
 
-	// Moving average on the measurements
-	for (unsigned int j=0;j<LBRState::NUMBER_OF_JOINTS;j++){
-		double sum = 0.0;
-		for (int i=0; i<5; i++){
-			sum += continuous_state->jnt_pos_buffer[i][j];
-		}
-		continuous_state->jnt_pos_avg[j] = sum/5.0;
-	}
+	// // Moving average on the measurements
+	// for (unsigned int j=0;j<LBRState::NUMBER_OF_JOINTS;j++){
+	// 	double sum = 0.0;
+	// 	for (int i=0; i<5; i++){
+	// 		sum += continuous_state->jnt_pos_buffer[i][j];
+	// 	}
+	// 	continuous_state->jnt_pos_avg[j] = sum/5.0;
+	// }
 
 	// compute the joint velocities
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		// continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
-		//     (double) continuous_state->cycle_time_us / 1000000.0);
-
-		// // write the joint positions and velocities to the JntArray
-		// continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
-		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
-
-		//this is not working
-		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->jnt_pos_avg[i], continuous_state->jnt_pos_prev_avg[i],
+		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
 		    (double) continuous_state->cycle_time_us / 1000000.0);
-		
+
 		// write the joint positions and velocities to the JntArray
-		continuous_state->local_qd.q(i) = continuous_state->jnt_pos_avg[i];
+		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
 		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
+
+	// 	//this is not working
+	// 	continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->jnt_pos_avg[i], continuous_state->jnt_pos_prev_avg[i],
+	// 	    (double) continuous_state->cycle_time_us / 1000000.0);
+		
+	// 	// write the joint positions and velocities to the JntArray
+	// 	continuous_state->local_qd.q(i) = continuous_state->jnt_pos_avg[i];
+	// 	continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
 
     // Forward velocity kinematics
