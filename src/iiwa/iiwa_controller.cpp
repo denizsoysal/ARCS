@@ -140,7 +140,6 @@ void iiwa_controller_cleaning(activity_t *activity){
     iiwa_controller_cleaning_compute(activity);
     iiwa_controller_cleaning_coordinate(activity);
     iiwa_controller_cleaning_configure(activity);
-	printf("finished cleaning\n");
 }
 
 // capability configuration
@@ -200,8 +199,6 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 		coord_state->buffer_initialized = false;
 	}
-
-	params->logger->info("Capability configuration");
 }
 
 void iiwa_controller_capability_configuration_compute(activity_t *activity){
@@ -422,8 +419,34 @@ void iiwa_controller_running_compute(activity_t *activity){
 				continuous_state->local_cmd_wrench[i] = 0.0;
 			}
 			continuous_state->local_cmd_wrench[2] = params->max_wrench * continuous_state->abag_state.control; 
+
+            // LOGGING
 			params->logger->info("wrench_z, {}", continuous_state->local_cmd_wrench[2]);
-			// spdlog::info("In Wrench Control: {}", continuous_state->local_cmd_wrench[2]);
+
+			params->logger->info("ek_bar, {}", continuous_state->abag_state.ek_bar);
+			params->logger->info("bias, {}", continuous_state->abag_state.bias);
+			params->logger->info("gain, {}", continuous_state->abag_state.gain);
+			params->logger->info("control, {}", continuous_state->abag_state.control);
+
+			params->logger->info("meas_jnt_pos[0], {}", continuous_state->local_meas_jnt_pos[0]);
+			params->logger->info("meas_jnt_pos[1], {}", continuous_state->local_meas_jnt_pos[1]);
+			params->logger->info("meas_jnt_pos[2], {}", continuous_state->local_meas_jnt_pos[2]);
+			params->logger->info("meas_jnt_pos[3], {}", continuous_state->local_meas_jnt_pos[3]);
+			params->logger->info("meas_jnt_pos[4], {}", continuous_state->local_meas_jnt_pos[4]);
+			params->logger->info("meas_jnt_pos[5], {}", continuous_state->local_meas_jnt_pos[5]);
+			params->logger->info("meas_jnt_pos[6], {}", continuous_state->local_meas_jnt_pos[6]);
+
+			params->logger->info("meas_jnt_vel[0], {}", continuous_state->meas_jnt_vel[0]);
+			params->logger->info("meas_jnt_vel[1], {}", continuous_state->meas_jnt_vel[1]);
+			params->logger->info("meas_jnt_vel[2], {}", continuous_state->meas_jnt_vel[2]);
+			params->logger->info("meas_jnt_vel[3], {}", continuous_state->meas_jnt_vel[3]);
+			params->logger->info("meas_jnt_vel[4], {}", continuous_state->meas_jnt_vel[4]);
+			params->logger->info("meas_jnt_vel[5], {}", continuous_state->meas_jnt_vel[5]);
+			params->logger->info("meas_jnt_vel[6], {}", continuous_state->meas_jnt_vel[6]);
+
+			params->logger->info("local_vz, {}", local_vz);
+			params->logger->info("cycle_time_us, {}", continuous_state->cycle_time_us);
+
 			break;
 		}
 		case(TORQUE):
