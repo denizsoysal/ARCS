@@ -168,6 +168,9 @@ int main(int argc, char**argv){
 	auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
     iiwa_controller_params->logger = controller_logger;
 
+	auto estimation_logger = std::make_shared<spdlog::logger>("iiwa_state_estimation", shared_file_sink);
+    iiwa_estimation_params->logger = estimation_logger;
+
 	// ### THREADS ### //
 	thread_t thread_iiwa;
 	thread_t thread_iiwa_controller;
