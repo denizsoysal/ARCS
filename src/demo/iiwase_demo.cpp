@@ -214,7 +214,7 @@ int main(int argc, char**argv){
 	
 	// Freeing memory
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
-	ec_iiwa_state_estimation.destroy_lcsm(&iiwa_activity);
+	ec_iiwa_state_estimation.destroy_lcsm(&estimation_activity);
 	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
 	ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;
