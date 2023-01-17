@@ -57,16 +57,11 @@ typedef struct iiwa_state_estimation_continuous_state_s{
     KDL::JntArray local_q;
     KDL::JntArrayVel local_qd;
     KDL::FrameVel local_cartvel;
+    KDL::Frame local_cartpos;
 
     // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
     double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-
-    // Variables for the averaging of the position measurements
-    double jnt_pos_buffer[5][LBRState::NUMBER_OF_JOINTS]; //5 is the size of the averaging window, it might be modified
-    int avg_buffer_ind;
-    double jnt_pos_avg[LBRState::NUMBER_OF_JOINTS];
-    double jnt_pos_prev_avg[LBRState::NUMBER_OF_JOINTS];
 
     // Data structures for time
     struct timespec prev_timespec;
@@ -85,7 +80,7 @@ typedef struct iiwa_state_estimation_coordination_state_s {
     bool deinitialisation_request;
 
     // Mutex
-    pthread_mutex_t *sensor_lock;
+    pthread_mutex_t *sensor_lock, estimate_lock;
 
     // First run compute cycle
     bool first_run_compute_cycle;
@@ -100,8 +95,8 @@ extern const iiwa_state_estimation_t ec_iiwa_state_estimation;
  * @param *previous_timespec from timespec_get()
  * @return the time difference in microseconds from current-previous. 
 */   
-long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec);
+long difftimespec_us_estimate(struct timespec *current_timespec, struct timespec *prev_timespec);
 
-double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time);
+double estimate_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time);
 
 #endif //iiwa_state_estimation_HPP

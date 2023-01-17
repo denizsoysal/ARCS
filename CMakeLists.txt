@@ -96,6 +96,7 @@ set(IIWA_AACAL_INCLUDE_DIR ${IIWA_AACAL_SOURCE_DIR}/include)
 add_library(${PROJECT_NAME} SHARED
     src/iiwa/iiwa_controller.cpp
     src/iiwa/iiwa_virtual.cpp
+    src/iiwa/iiwa_state_estimation.cpp
     src/task_mediator/task_mediator.cpp
     src/task_mediator/task_mediator_petrinet.cpp
 )

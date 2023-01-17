@@ -23,6 +23,7 @@
 #include <iiwa_activity.hpp>
 
 #include "iiwa/iiwa_controller.hpp"
+#include "iiwa/iiwa_state_estimation.hpp"
 #include "task_mediator/task_mediator.hpp"
 
 // spdlog
@@ -31,6 +32,7 @@
 
 bool *deinitialisation_request;
 bool *deinit_controller;
+bool *deinit_estimation;
 
 static void sigint_handler(int sig){
 	if (deinitialisation_request==NULL){
@@ -38,6 +40,7 @@ static void sigint_handler(int sig){
 	}else{
 		*deinitialisation_request = true;
 		*deinit_controller = true;
+		*deinit_estimation = true;
 	}
 }
 
@@ -85,6 +88,7 @@ int main(int argc, char**argv){
 	activity_t iiwa_activity; 
 	activity_t iiwa_controller;
 	activity_t mediator_activity;
+	activity_t estimation_activity;
 
 	ec_iiwa_activity.create_lcsm(&iiwa_activity, "iiwa_activity");   
 	ec_iiwa_activity.resource_configure_lcsm(&iiwa_activity);
@@ -94,6 +98,9 @@ int main(int argc, char**argv){
 
 	ec_task_mediator.create_lcsm(&mediator_activity, "mediator_activity");
 	ec_task_mediator.resource_configure_lcsm(&mediator_activity);
+
+	ec_iiwa_state_estimation.create_lcsm(&estimation_activity, "estimation_activity");
+	ec_iiwa_state_estimation.resource_configure_lcsm(&estimation_activity);
 
 	// Initialize Vars: iiwa_activity
 	iiwa_activity_params_t* iiwa_activity_params = (iiwa_activity_params_t *) iiwa_activity.conf.params;
@@ -114,6 +121,13 @@ int main(int argc, char**argv){
 
 	deinit_controller= &iiwa_controller_coord_state->deinitialisation_request;
 
+	// Initialize Vars: iiwa_state_estimation
+	iiwa_state_estimation_params_t* iiwa_estimation_params = (iiwa_state_estimation_params_t *) estimation_activity.conf.params;
+	iiwa_state_estimation_continuous_state_t *iiwa_estimation_continuous_state = (iiwa_state_estimation_continuous_state_t *) estimation_activity.state.computational_state.continuous;
+	iiwa_state_estimation_coordination_state_t *iiwa_estimation_coord_state = (iiwa_state_estimation_coordination_state_t *) estimation_activity.state.coordination_state;
+
+	deinit_estimation= &iiwa_estimation_coord_state->deinitialisation_request;
+
     // Initialize Vars: task_mediator
 	task_mediator_coordination_state_t* task_coord_state = (task_mediator_coordination_state_t *) mediator_activity.state.coordination_state;
 
@@ -131,12 +145,19 @@ int main(int argc, char**argv){
 	iiwa_controller_continuous_state->cmd_torques = iiwa_activity_params->iiwa_params.cmd_torques;
 	iiwa_controller_continuous_state->cmd_wrench = iiwa_activity_params->iiwa_params.cmd_wrench;
 
+	// Share sensors between state estimation and iiwa
+	iiwa_estimation_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
+	iiwa_estimation_continuous_state->meas_jnt_pos = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos;
+	iiwa_estimation_continuous_state->meas_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_torques;
+	iiwa_estimation_continuous_state->meas_ext_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques;
+
 	// Task <-> Controller  
 	task_coord_state->initiate_motion = &iiwa_controller_coord_state->execution_request;
 
 	// Manually 
 	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
+	iiwa_estimation_coord_state->execution_request = true;
 	//iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
@@ -151,21 +172,24 @@ int main(int argc, char**argv){
 	thread_t thread_iiwa;
 	thread_t thread_iiwa_controller;
 	thread_t thread_mediator;
+	thread_t thread_estimation;
 
 	// Create thread: data structure, thread name, cycle time in milliseconds
 	create_thread(&thread_iiwa, "thread_iiwa", 4); // 4 ms = 250 Hz
+	create_thread(&thread_estimation, "thread_estimation", 8);
 	create_thread(&thread_iiwa_controller, "thread_iiwa_controller", 8);
 	create_thread(&thread_mediator, "thread_mediator", 100);
 
 	// Register activities in threads
 	register_activity(&thread_iiwa, &iiwa_activity, "iiwa_activity");
+	register_activity(&thread_estimation, &estimation_activity, "estimation_activity");
 	register_activity(&thread_iiwa_controller, &iiwa_controller, "iiwa_controller");
 	register_activity(&thread_mediator, &mediator_activity, "mediator_activity");
 
 	// ### SHARED MEMORY ### //
 
 	// Create POSIX threads   
-	pthread_t pthread_iiwa, pthread_iiwa_controller, pthread_mediator, pthread_petrinet;
+	pthread_t pthread_iiwa, pthread_iiwa_controller, pthread_estimation, pthread_mediator, pthread_petrinet;
 
 	// Initialize the Mutex
 	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
@@ -173,18 +197,21 @@ int main(int argc, char**argv){
 	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
+	pthread_create( &pthread_estimation, NULL, do_thread_loop, ((void*) &thread_estimation));
 	pthread_create( &pthread_iiwa_controller, NULL, do_thread_loop, ((void*) &thread_iiwa_controller));
 	pthread_create( &pthread_mediator, NULL, do_thread_loop, ((void*) &thread_mediator));
 	pthread_create( &pthread_petrinet, NULL, set_petrinet, (void*) &mediator_activity);
 
 	// Wait for threads to finish, which means all activities must properly finish and reach the dead LCSM state
 	pthread_join(pthread_iiwa, NULL);
+	pthread_join(pthread_estimation, NULL);
 	pthread_join(pthread_iiwa_controller, NULL);
 	pthread_join(pthread_mediator, NULL);
 	pthread_join(pthread_petrinet, NULL);
 	
 	// Freeing memory
 	ec_iiwa_activity.destroy_lcsm(&iiwa_activity);
+	ec_iiwa_state_estimation.destroy_lcsm(&iiwa_activity);
 	ec_iiwa_controller.destroy_lcsm(&iiwa_controller);
 	ec_task_mediator.destroy_lcsm(&mediator_activity);
 	return 0;
