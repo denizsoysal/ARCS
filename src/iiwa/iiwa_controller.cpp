@@ -350,7 +350,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 
 	double cmd_vel;
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
-	double local_vz;
+	KDL::Twist local_v;
 
     // get the current timestamp and compute the current cycle time. 
 	if (coord_state->first_run_compute_cycle){
@@ -406,8 +406,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(WRENCH):
 		{	
             // extract the z component
-			local_vz = -1 * continuous_state->local_cartvel.GetTwist().vel(2);
-			abag(&params->abag_params, &continuous_state->abag_state, 0.05, local_vz);
+			local_v = continuous_state->local_cartvel.GetTwist();
+			abag(&params->abag_params, &continuous_state->abag_state, 0.05, -1*local_v.vel(2));
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
@@ -444,7 +444,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 			params->logger->info("meas_jnt_vel[5], {}", continuous_state->meas_jnt_vel[5]);
 			params->logger->info("meas_jnt_vel[6], {}", continuous_state->meas_jnt_vel[6]);
 
-			params->logger->info("local_vz, {}", local_vz);
+			params->logger->info("local_vx, {}", local_v.vel(0));
+			params->logger->info("local_vy, {}", local_v.vel(1));
+			params->logger->info("local_vz, {}", local_v.vel(2));
 			params->logger->info("cycle_time_us, {}", continuous_state->cycle_time_us);
 
 			break;
