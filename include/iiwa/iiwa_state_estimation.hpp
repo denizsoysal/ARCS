@@ -45,6 +45,7 @@ typedef struct iiwa_state_estimation_params_s{
 // Continuous state which is the state of the state_estimation system, including input and output signals
 typedef struct iiwa_state_estimation_continuous_state_s{
     // Input signals from arm sensors (pointers to first elements in array)
+    // These could probably be moved in the params data struct.
     double 	*meas_jnt_pos;
     double 	*meas_torques;
 	double 	*meas_ext_torques;
@@ -56,8 +57,8 @@ typedef struct iiwa_state_estimation_continuous_state_s{
 
     KDL::JntArray local_q;
     KDL::JntArrayVel local_qd;
-    KDL::FrameVel local_cartvel;
-    KDL::Frame local_cartpos;
+    KDL::FrameVel local_cart_vel;
+    KDL::Frame local_cart_pos;
 
     // "State" Parameters which are computed in the activity
     double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
@@ -67,6 +68,11 @@ typedef struct iiwa_state_estimation_continuous_state_s{
     struct timespec prev_timespec;
     struct timespec current_timespec;
     long cycle_time_us; //cycle time in microseconds
+
+    //Data structures communicated to other activities
+    KDL::FrameVel cart_vel;
+    KDL::Frame cart_pos;
+    double estimated_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 }iiwa_state_estimation_continuous_state_t;
 
 //! (computational) discrete state

@@ -292,25 +292,42 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
 		continuous_state->meas_jnt_vel[i] = estimate_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i], (double) continuous_state->cycle_time_us / 1000000.0);
 
+		//Here we still have to filter the estimated velocity because it is very noisy
+
+
 		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
 		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 	}
 
     // Forward velocity kinematics
-	velksolver_estimate.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
-	fksolver_estimate.JntToCart(continuous_state->local_q, continuous_state->local_cartpos);
+	velksolver_estimate.JntToCart(continuous_state->local_qd, continuous_state->local_cart_vel);
+	fksolver_estimate.JntToCart(continuous_state->local_q, continuous_state->local_cart_pos);
 
-	std::cout<< "Position in arm_base frame: " << continuous_state->local_cartpos.p <<std::endl;
-	std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cartvel.GetTwist() <<std::endl;
+	std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
+	std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
     //In which frame are they expressed ? Robot base frame?
-    // Set the local_cartvel to a variable that can be used in other activities : Is the local_cartvel expressed in end_effector frame or base?
+    // Set the cart_vel to a variable that can be used in other activities : Is the cart_vel expressed in end_effector frame or base?
+}
+
+void iiwa_state_estimation_running_communicate_write(activity_t *activity){
+    iiwa_state_estimation_continuous_state_t *continuous_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_state_estimation_coordination_state_t *coord_state = (iiwa_state_estimation_coordination_state_t *) activity->state.coordination_state;
+
+	// Write the motion actuation commands back to the iiwa
+	pthread_mutex_lock(&coord_state->estimate_lock);
+	// copy the local cart_vel and pos to global variables
+	memcpy(&continuous_state->cart_pos, &continuous_state->local_cart_pos, sizeof(continuous_state->local_cart_pos));
+	memcpy(&continuous_state->cart_vel, &continuous_state->local_cart_vel, sizeof(continuous_state->local_cart_vel));
+	memcpy(continuous_state->estimated_jnt_vel, continuous_state->meas_jnt_vel, sizeof(continuous_state->meas_jnt_vel));
+	pthread_mutex_unlock(&coord_state->estimate_lock);
 }
 
 void iiwa_state_estimation_running(activity_t *activity){
 	iiwa_state_estimation_running_communicate(activity);
 	iiwa_state_estimation_running_coordinate(activity);
 	iiwa_state_estimation_running_compute(activity);
+	iiwa_state_estimation_running_communicate_write(activity);
 	iiwa_state_estimation_running_configure(activity);
 }
 
@@ -402,11 +419,11 @@ double estimate_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_
 	return vel;
 }
 
-// // Function to get the cartesian position of the end_effector expressed in the inertial frame (located at the bottom of the bimanual support)
-// void compute_inertial_pos(activity_t *activity){
-// 	iiwa_state_estimation_continuous_state_t *continuous_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
-// 	KDL::Frame arm_base_cartpos;
-// 	fksolver_estimate.JntToCart(continuous_state->local_q, arm_base_cartpos);
-// 	std::cout<< "Position in arm_base frame: " << arm_base_cartpos <<std::endl;
-// 	//Need to map the coordinates from the arm_base frame to the inertial frame
-// }
+// Function to get the cartesian position of the end_effector expressed in the inertial frame (located at the bottom of the bimanual support)
+void compute_inertial_pos(activity_t *activity){
+	iiwa_state_estimation_continuous_state_t *continuous_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
+	KDL::Frame arm_base_cartpos;
+	fksolver_estimate.JntToCart(continuous_state->local_q, arm_base_cartpos);
+	std::cout<< "Position in arm_base frame: " << arm_base_cartpos <<std::endl;
+	//Need to map the coordinates from the arm_base frame to the inertial frame
+}

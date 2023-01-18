@@ -132,13 +132,15 @@ int main(int argc, char**argv){
 	task_mediator_coordination_state_t* task_coord_state = (task_mediator_coordination_state_t *) mediator_activity.state.coordination_state;
 
     // Share memory iiwa <--> controller
-	iiwa_controller_coord_state->sensor_lock = &iiwa_activity_coord_state->sensor_lock;
 	iiwa_controller_coord_state->actuation_lock = &iiwa_activity_coord_state->actuation_lock;
 
-    // Share sensors between controller and iiwa
-	iiwa_controller_continuous_state->meas_jnt_pos = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_jnt_pos;
-	iiwa_controller_continuous_state->meas_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_torques;
-	iiwa_controller_continuous_state->meas_ext_torques = iiwa_activity_continuous_state->iiwa_state.iiwa_sensors.meas_ext_torques;
+	// Share memory estimation <-> controller 
+	iiwa_controller_coord_state->estimate_lock = &iiwa_estimation_coord_state->estimate_lock;
+
+    // Share state estimation between estimation and controller
+	iiwa_controller_continuous_state->cart_pos = &iiwa_estimation_continuous_state->cart_pos;
+	iiwa_controller_continuous_state->cart_vel = &iiwa_estimation_continuous_state->cart_vel;
+	iiwa_controller_continuous_state->jnt_vel = &iiwa_estimation_continuous_state->estimated_jnt_vel;
 
 	// Share actuators between controller and iiwa
 	iiwa_controller_continuous_state->cmd_jnt_vel = iiwa_activity_params->iiwa_params.cmd_jnt_vel;
@@ -198,6 +200,7 @@ int main(int argc, char**argv){
 	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
 	pthread_mutex_init(&iiwa_activity_coord_state->actuation_lock, NULL);
 	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
+	pthread_mutex_init(&iiwa_estimation_coord_state->estimate_lock, NULL);
 
 	pthread_create( &pthread_iiwa, NULL, do_thread_loop, ((void*) &thread_iiwa));
 	pthread_create( &pthread_estimation, NULL, do_thread_loop, ((void*) &thread_estimation));
