@@ -174,6 +174,7 @@ void iiwa_state_estimation_capability_configuration_configure(activity_t *activi
 	params->logger->info("Capability configuration");
 }
 
+//This state of the lcsm is probably useless with the current implementation of this activity
 void iiwa_state_estimation_capability_configuration_compute(activity_t *activity){
 	iiwa_state_estimation_params_t* params = (iiwa_state_estimation_params_t *) activity->conf.params;
 
@@ -293,12 +294,22 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 		continuous_state->meas_jnt_vel[i] = estimate_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i], (double) continuous_state->cycle_time_us / 1000000.0);
 
 		//Here we still have to filter the estimated velocity because it is very noisy
-
+		//Copying the new velocity measurement in the buffer
+		continuous_state->jnt_vel_buffer[continuous_state->avg_buffer_ind][i] = continuous_state->meas_jnt_vel[i];
+		//Computing the average velocity
+		// Moving average on the measurements
+		double sum = 0.0;
+		for (int j=0; j<5; j++){
+			sum += continuous_state->jnt_vel_buffer[j][i];
+		}
+		continuous_state->jnt_vel_avg[i] = sum/5.0;
 
 		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
-		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
+		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
+		continuous_state->local_qd.qdot(i) = continuous_state->jnt_vel_avg[i];
 	}
+	continuous_state->avg_buffer_ind = (continuous_state->avg_buffer_ind+1)%5;
 
     // Forward velocity kinematics
 	velksolver_estimate.JntToCart(continuous_state->local_qd, continuous_state->local_cart_vel);
