@@ -89,7 +89,7 @@ cv::Mat adaptive_median_filtering(std::string path_to_img)
     std::cout << "loss improvement is: " << 1/ratio << "\n";
     //if this ratio is higher than 0.8, this means that we don't improve a lot
     //this threshold is user-defined
-      if(i>0 and ratio > 0.98){
+      if(i>0 and ratio > 0.96){
       std::cout << "Loss plateau reached !" << "\n";
       std::cout<< "Final 'i' is:" << i << "\n" << "Final kernel size is then:" << 2*i+1 << "\n";
       imwrite("test.jpg", closed_image); // A JPG FILE IS BEING SAVED
@@ -277,7 +277,7 @@ double* histogram_change_detect(cv::Mat input_to_detect)
   //we start at the middle of the image (input_to_detect.size().width)/2, (input_to_detect.size().height)/2
   //and draw a rectange of the size of the image divided by 30
   int i;
-  int size = 40;
+  int size = 30;
   //loop for different kernel size (i) until we reach a plateau (minimum) 
   //in term of loss (non-homogenity)
 
@@ -285,35 +285,32 @@ double* histogram_change_detect(cv::Mat input_to_detect)
   double diff_array [2];
   
   for(i=0; i<=20; i++){
-
-
     cout << "the value of i is:" << i << "\n";
-    mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
-    second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+    mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)-i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
+    second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)-(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
     //now we apply the mask on the image
     input_to_detect.copyTo(masked, mask);
     //now we apply the mask on the image
     input_to_detect.copyTo(second_masked, second_mask);
     imshow(window_name, second_masked);
     waitKey();
-
-    
-    // instead of pixel wise as here, do it with histogram comparison:
-    // https://docs.opencv.org/3.4/d8/dc8/tutorial_histogram_comparison.html
-
+    //blur the mask
+    Mat blurred_masked, blurred_second_masked;
+    GaussianBlur(masked, blurred_masked, Size(3, 3), 0);
+    GaussianBlur(second_masked, blurred_second_masked, Size(3, 3), 0);
     //first go to HSV spac
     Mat hsv_masked, hsv_second_masked;
     cvtColor( masked, hsv_masked, COLOR_BGR2HSV );
-    cvtColor( second_masked, hsv_second_masked, COLOR_BGR2HSV );
-
-    int h_bins = 50, s_bins = 60;
-    int histSize[] = { h_bins, s_bins };
+    cvtColor( second_masked , hsv_second_masked, COLOR_BGR2HSV );
+    int h_bins = 5, s_bins = 5, v_bins = 5;
+    int histSize[] = { h_bins, s_bins,v_bins };
     // hue varies from 0 to 179, saturation from 0 to 255
     float h_ranges[] = { 0, 180 };
     float s_ranges[] = { 0, 256 };
-    const float* ranges[] = { h_ranges, s_ranges };
+    float v_ranges[] = { 0, 256 };
+    const float* ranges[] = { h_ranges, s_ranges,v_ranges };
     // Use the 0-th and 1-st channels
-    int channels[] = { 0, 1 };
+    int channels[] = { 0, 1, 2 };
     Mat hist_masked, hist_second_masked;
 
     calcHist( &hsv_masked, 1, channels, Mat(), hist_masked, 2, histSize, ranges, true, false );
@@ -321,7 +318,7 @@ double* histogram_change_detect(cv::Mat input_to_detect)
     calcHist( &hsv_second_masked, 1, channels, Mat(), hist_second_masked, 2, histSize, ranges, true, false );
     normalize( hist_second_masked, hist_second_masked, 0, 1, NORM_MINMAX, -1, Mat() );
 
-    float diff = compareHist( hist_second_masked, hist_masked, 1);
+    float diff = compareHist( hist_masked,hist_second_masked, 4);
     cout << "value of diff is" <<  diff << "\n";
 
     //store intial diff
@@ -334,30 +331,28 @@ double* histogram_change_detect(cv::Mat input_to_detect)
     std::cout << diff_array[1] << " and: " << diff_array[2] << "\n";
     //compute ratio between current loss and previous loss
     float ratio = diff_array[2] / diff_array[1];
-    std::cout << "loss is: " << ratio << "\n";
-    diff_array[1] = diff;
+    std::cout << "curent loss is: " << diff<< "\n";
+    
     //if this ratio is higher than 0.8, this means that we don't improve a lot
     //this threshold is user-defined
-    if(i>3 and ratio > 1.3){
-      std::cout << "Loss plateau reached !" << "\n";
-      imshow(window_name,second_masked);
-      waitKey();
-      break;
+    // if(i>2 and ratio > 1.50 or i>2 and ratio < 0.50){
+    //   std::cout << "Loss plateau reached !" << "\n";
+    //   imshow(window_name,second_masked);
+    //   waitKey();
+    //   break;
 
-    }
+    // }
     //if ratio threshold not reached, add this loss as previous loss
-    
-    
-
-
-
+    diff_array[1] = diff;
+  
   }
-
 
   //we declare the array as static
   static double coord_array [4];
-  coord_array[0] = ((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size;
-  coord_array[1] = ((input_to_detect.size().height)/2)+(i+1)*(input_to_detect.size().height)/size;
+  //the coordinate are the middle point of the second mask
+
+  coord_array[0] = (((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size)+(input_to_detect.size().width)/(2*size);
+  coord_array[1] = (((input_to_detect.size().height)/2)-(i+1)*(input_to_detect.size().height)/size)+(input_to_detect.size().height)/(2*size);
 
   return coord_array;
 }
@@ -370,15 +365,15 @@ int main( int argc, char** argv )
     cv::resizeWindow(window_name, 300, 300);
 
 
-    cv::Mat closed_image = adaptive_median_filtering("../322915141_1210091463221811_7344717193191901619_n.jpg");
+    cv::Mat closed_image = adaptive_median_filtering("../323002414_443946944476613_815607096316111238_n.jpg");
     //get address of coordinate:
     double* detected;
     detected =  histogram_change_detect(closed_image);
 
     Point center(detected[0] , detected[1]);//Declaring the center point
-    int radius = 10; //Declaring the radius
+    int radius = 30; //Declaring the radius
     Scalar line_Color(0, 0, 0);//Color of the circle
-    int thickness = 2;//thickens of the line
+    int thickness = 5;//thickens of the line
     circle(closed_image, center,radius, line_Color, thickness);//Using circle()function to draw the line//
     imshow(window_name, closed_image);//Showing the circle//
     waitKey();
