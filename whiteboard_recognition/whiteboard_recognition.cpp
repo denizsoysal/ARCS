@@ -255,9 +255,8 @@ cv::Mat detect_contour(cv::Mat segmented_image)
 }
 
 
-int histogram_change_detect(cv::Mat input_to_detect)
+double* histogram_change_detect(cv::Mat input_to_detect, int direction)
 {
-
     // Get the size of the image
     int rows = input_to_detect.rows;
     int cols = input_to_detect.cols;
@@ -279,7 +278,7 @@ int histogram_change_detect(cv::Mat input_to_detect)
     int maskHeight = 25;
 
     // Set threshold for histogram difference
-    float threshold = 0.95;
+    float threshold = 0.80;
     float range[] = { 0, 255 };
     const float* histRange = { range };
 
@@ -291,8 +290,19 @@ int histogram_change_detect(cv::Mat input_to_detect)
     int step = maskWidth;
     int i = 0;
     int nextX,nextY;
+
+    //create struc to store point and corresponding value (to look at the max later)
+    struct Point_with_diff {
+      int x, y;
+      float diff;
+      Point_with_diff(int a, int b, float difference) { this->x = a; this->y = b; this->diff=difference;}
+    };
+
+
+
     // Move mask in different directions
     while (true) {
+
         // Get current masked image
         Rect roi(maskX, maskY, maskWidth, maskHeight);
         if (roi.x < 0) roi.x = 0;
@@ -303,12 +313,43 @@ int histogram_change_detect(cv::Mat input_to_detect)
 
         // Calculate histogram of current masked image
         calcHist( &currentMask, 1, channels, Mat(), currentHist, 1, &maskWidth, &histRange);
-        nextX = maskX;
-        nextY = maskY;
-        nextX -= step;
-        nextY -= step;
+        if(direction == 0){
+          //go up right 
+            nextX = maskX;
+            nextY = maskY;
+            nextX += step;
+            nextY += step;
+        }
 
-        if(nextY > gray.rows or nextX > gray.cols){
+        else if (direction== 1) {
+          //go up left
+            nextX = maskX;
+            nextY = maskY;
+            nextX -= step;
+            nextY += step;
+        }
+
+
+        else if (direction== 2) {
+          //go down right
+            nextX = maskX;
+            nextY = maskY;
+            nextX += step;
+            nextY -= step;
+        }
+
+        else if(direction == 3){
+          //go down left
+            nextX = maskX;
+            nextY = maskY;
+            nextX -= step;
+            nextY -= step;
+        }
+
+
+
+
+        if(nextY > gray.rows or nextX > gray.cols ){
             cout<<"Whiteboard not detected"<<endl;
             break;
         }
@@ -351,7 +392,16 @@ int histogram_change_detect(cv::Mat input_to_detect)
     imshow("Edges", image);
     waitKey();
 
-    return 0; 
+    
+    //we declare the array as static
+    static double coord_array [4];
+    coord_array[0] = (maskX, maskY);
+    coord_array[1] = (nextX, nextY);
+
+    std::cout << coord_array[0] << "\n";
+    std::cout << coord_array[1];
+
+    return coord_array;
 
 }
 
@@ -370,7 +420,7 @@ int main( int argc, char** argv )
     // Mat closed_image;
     // closed_image.convertTo(immm,  CV_32F, 1.0/255);
 
-    histogram_change_detect(closed_image);
+    histogram_change_detect(closed_image,0);
 
     // Point center(detected[0] , detected[1]);//Declaring the center point
     // int radius = 30; //Declaring the radius
