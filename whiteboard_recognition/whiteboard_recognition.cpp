@@ -48,12 +48,11 @@ P.S.2 : AS A HOMOGENEOUS METRIC, FFT CAN ALSO BE CONSIDERED
 using namespace cv;
 using namespace std;
 
-cv::Mat adaptive_median_filtering(std::string path_to_img)
+cv::Mat adaptive_median_filtering(Mat image)
 {
   //define the matrix we will need
-  cv::Mat src, image, sum, squared_diff, image_blurred, absolute_diff, closed_image, closed_image_blurred;
-  //read image
-  image = imread(path_to_img,IMREAD_COLOR);
+  cv::Mat src, sum, squared_diff, image_blurred, absolute_diff, closed_image, closed_image_blurred;
+  
   //Blur the image with 3x3 Gaussian kernel
   GaussianBlur(image, image_blurred, Size(11, 11), 0);
   //compute pixel wise absolute diff between image and blurred one 
@@ -89,7 +88,7 @@ cv::Mat adaptive_median_filtering(std::string path_to_img)
     std::cout << "loss improvement is: " << 1/ratio << "\n";
     //if this ratio is higher than 0.8, this means that we don't improve a lot
     //this threshold is user-defined
-      if(i>0 and ratio > 0.96){
+      if(i>0 and ratio > 0.93){
       std::cout << "Loss plateau reached !" << "\n";
       std::cout<< "Final 'i' is:" << i << "\n" << "Final kernel size is then:" << 2*i+1 << "\n";
       imwrite("test.jpg", closed_image); // A JPG FILE IS BEING SAVED
@@ -254,18 +253,20 @@ cv::Mat detect_contour(cv::Mat segmented_image)
 
 }
 
+//create struc to store point and corresponding value (to look at the max later)
+struct Point_with_diff {
+  int x1;
+  int y1;
+  int x2;
+  int y2;
+  float difference;
 
-double* histogram_change_detect(cv::Mat input_to_detect, int direction)
+};
+
+
+void histogram_change_detect(cv::Mat image, int direction, struct Point_with_diff *point_with_diff_array)
 {
-    // Get the size of the image
-    int rows = input_to_detect.rows;
-    int cols = input_to_detect.cols;
 
-    // Create the output image
-    Mat image;
-
-    // Resize the image
-    resize(input_to_detect, image, Size(cols/2,rows/2),0,0,INTER_LINEAR);
 
     // Convert to grayscale
     Mat gray;
@@ -291,17 +292,16 @@ double* histogram_change_detect(cv::Mat input_to_detect, int direction)
     int i = 0;
     int nextX,nextY;
 
-    //create struc to store point and corresponding value (to look at the max later)
-    struct Point_with_diff {
-      int x, y;
-      float diff;
-      Point_with_diff(int a, int b, float difference) { this->x = a; this->y = b; this->diff=difference;}
-    };
 
+
+    // //create array to store Point_with_diff
+    // static Point_with_diff point_with_diff_array [100];
 
 
     // Move mask in different directions
     while (true) {
+
+        
 
         // Get current masked image
         Rect roi(maskX, maskY, maskWidth, maskHeight);
@@ -376,10 +376,26 @@ double* histogram_change_detect(cv::Mat input_to_detect, int direction)
         if (histDiff > threshold and histDiff < 2*threshold and i>1) {
             // Draw line on image
             line(image, Point(maskX, maskY), Point(nextX, nextY), Scalar(0, 255, 0), 2);
+
+            //store in array
+            point_with_diff_array[i].x1 = maskX;
+            point_with_diff_array[i].y1 = maskY;
+            point_with_diff_array[i].x2 = nextX;
+            point_with_diff_array[i].y2 = nextY;
+            point_with_diff_array[i].difference = histDiff;
+
+
             break;
         }
-        
 
+        //store in array
+        point_with_diff_array[i].x1 = maskX;
+        point_with_diff_array[i].y1 = maskY;
+        point_with_diff_array[i].x2 = nextX;
+        point_with_diff_array[i].y2 = nextY;
+        point_with_diff_array[i].difference = histDiff;
+
+        cout << "value is " << point_with_diff_array[i].x1 << "\n";
         // Update mask position
         maskX = nextX;
         maskY = nextY;
@@ -392,18 +408,31 @@ double* histogram_change_detect(cv::Mat input_to_detect, int direction)
     imshow("Edges", image);
     waitKey();
 
-    
-    //we declare the array as static
-    static double coord_array [4];
-    coord_array[0] = (maskX, maskY);
-    coord_array[1] = (nextX, nextY);
-
-    std::cout << coord_array[0] << "\n";
-    std::cout << coord_array[1];
-
-    return coord_array;
 
 }
+
+int find_max_index(Point_with_diff *array){
+  float current_max_diff;
+  int max_index;
+
+  for(int i=0;i<=sizeof(array)+1;i++){
+    cout << "current val is" << array[i].difference << "\n";
+    if(i==0){
+      current_max_diff = array[i].difference;
+    }
+    else{
+      if(array[i].difference>current_max_diff){
+        current_max_diff = array[i].difference;
+        max_index = i;
+      }
+    }
+    cout << "current max diff is" << current_max_diff << "\n";
+  }
+
+  return max_index;
+}
+
+
 
 
 int main( int argc, char** argv )
@@ -412,26 +441,49 @@ int main( int argc, char** argv )
     namedWindow( window_name, WINDOW_NORMAL );
     cv::resizeWindow(window_name, 300, 300);
 
+    //read image
+    Mat input = imread("../322915141_1210091463221811_7344717193191901619_n.jpg",IMREAD_COLOR);
 
-    cv::Mat closed_image = adaptive_median_filtering("../323531059_3414989708821240_2898831769865535112_n.jpg");
-    // //get address of coordinate:
-    // Mat immm = imread("../323527929_737669997789369_8093382492363965159_n.jpg");
-    // //read image
-    // Mat closed_image;
-    // closed_image.convertTo(immm,  CV_32F, 1.0/255);
+    // Get the size of the image
+    int rows = input.rows;
+    int cols = input.cols;
 
-    histogram_change_detect(closed_image,0);
+    Mat image;
 
-    // Point center(detected[0] , detected[1]);//Declaring the center point
-    // int radius = 30; //Declaring the radius
-    // Scalar line_Color(0, 0, 0);//Color of the circle
-    // int thickness = 5;//thickens of the line
-    // circle(closed_image, center,radius, line_Color, thickness);//Using circle()function to draw the line//
-    // imshow(window_name, closed_image);//Showing the circle//
-    // waitKey();
-    // std::cout << detected[0] << "  " << detected[1] << "  "  ;
-    // cv::Mat image_after_otsu =  segment_otsu(closed_image);
-    // imwrite("../allonsons.jpg",image_after_otsu);
-    // cv::Mat detected_contour = detect_contour(closed_image);
+     // Resize the image
+    resize(input, image, Size(cols/2,rows/2),0,0,INTER_LINEAR);
+
+
+    cv::Mat closed_image = adaptive_median_filtering(image);
+
+   //find up
+   struct Point_with_diff up_array[100];
+   histogram_change_detect(closed_image,0, up_array); 
+   int max_index = find_max_index(up_array);
+   cout << "val is" <<  up_array[max_index].difference << "stop";
+   // Draw line on image
+   line(image, Point(up_array[max_index].x1, up_array[max_index].y1), Point(up_array[max_index].x2, up_array[max_index].y2), Scalar(0, 255, 0), 2);
+   imshow(window_name,image);
+   waitKey();
+
+   //find down
+   struct Point_with_diff down_array[100];
+   histogram_change_detect(closed_image,1, down_array);
+   int max_index_down = find_max_index(down_array);
+   // Draw line on image
+   line(image, Point(down_array[max_index_down].x1, down_array[max_index_down].y1), Point(down_array[max_index_down].x2, down_array[max_index_down].y2), Scalar(0, 255, 0), 2);
+   imshow(window_name,image);
+   waitKey();
+
+   //find right
+   struct Point_with_diff right_array[100];
+   histogram_change_detect(closed_image,2, right_array);
+
+   //find left
+   struct Point_with_diff left_array[100];
+   histogram_change_detect(closed_image,3, left_array);
+
+
+
 }
 
