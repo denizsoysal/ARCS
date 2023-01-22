@@ -255,106 +255,104 @@ cv::Mat detect_contour(cv::Mat segmented_image)
 }
 
 
-double* histogram_change_detect(cv::Mat input_to_detect)
+int histogram_change_detect(cv::Mat input_to_detect)
 {
-  //this function detect big changes in the histogram
-  //we apply a mask to the image each time to only consider a subset of the image
-  //we compute the histogram
-  //we move the mask 
-  //we look at the difference 
 
-  //this function return the address of the double array storing the coordinate of the
-  //detected mask
+    // Get the size of the image
+    int rows = input_to_detect.rows;
+    int cols = input_to_detect.cols;
 
-  const char* window_name = "Region Growing";
-  namedWindow( window_name, WINDOW_NORMAL );
-  cv::resizeWindow(window_name, 300, 300);
+    // Create the output image
+    Mat image;
 
-  //first define the masked input 
-  Mat masked, mask, second_mask, second_masked, diff, squared, sum_squared;
-  mask = cv::Mat::zeros(input_to_detect.size(), CV_8U); // all 0
-  second_mask = cv::Mat::zeros(input_to_detect.size(), CV_8U); // all 0
-  //we start at the middle of the image (input_to_detect.size().width)/2, (input_to_detect.size().height)/2
-  //and draw a rectange of the size of the image divided by 30
-  int i;
-  int size = 30;
-  //loop for different kernel size (i) until we reach a plateau (minimum) 
-  //in term of loss (non-homogenity)
+    // Resize the image
+    resize(input_to_detect, image, Size(cols/2,rows/2),0,0,INTER_LINEAR);
 
-  //create an array of 2 elements: previous diff, current diff
-  double diff_array [2];
-  
-  for(i=0; i<=20; i++){
-    cout << "the value of i is:" << i << "\n";
-    mask(Rect(((input_to_detect.size().width)/2)+i*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)-i*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
-    second_mask(Rect(((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size, ((input_to_detect.size().height)/2)-(i+1)*(input_to_detect.size().height)/size, (input_to_detect.size().width)/size, (input_to_detect.size().height)/size)) = 255;
-    //now we apply the mask on the image
-    input_to_detect.copyTo(masked, mask);
-    //now we apply the mask on the image
-    input_to_detect.copyTo(second_masked, second_mask);
-    imshow(window_name, second_masked);
-    waitKey();
-    //blur the mask
-    Mat blurred_masked, blurred_second_masked;
-    GaussianBlur(masked, blurred_masked, Size(3, 3), 0);
-    GaussianBlur(second_masked, blurred_second_masked, Size(3, 3), 0);
-    //first go to HSV spac
-    Mat hsv_masked, hsv_second_masked;
-    cvtColor( masked, hsv_masked, COLOR_BGR2HSV );
-    cvtColor( second_masked , hsv_second_masked, COLOR_BGR2HSV );
-    int h_bins = 5, s_bins = 5, v_bins = 5;
-    int histSize[] = { h_bins, s_bins,v_bins };
-    // hue varies from 0 to 179, saturation from 0 to 255
-    float h_ranges[] = { 0, 180 };
-    float s_ranges[] = { 0, 256 };
-    float v_ranges[] = { 0, 256 };
-    const float* ranges[] = { h_ranges, s_ranges,v_ranges };
-    // Use the 0-th and 1-st channels
-    int channels[] = { 0, 1, 2 };
-    Mat hist_masked, hist_second_masked;
+    // Convert to grayscale
+    Mat gray;
+    cvtColor(image, gray, COLOR_BGR2GRAY);
 
-    calcHist( &hsv_masked, 1, channels, Mat(), hist_masked, 2, histSize, ranges, true, false );
-    normalize( hist_masked, hist_masked, 0, 1, NORM_MINMAX, -1, Mat() );
-    calcHist( &hsv_second_masked, 1, channels, Mat(), hist_second_masked, 2, histSize, ranges, true, false );
-    normalize( hist_second_masked, hist_second_masked, 0, 1, NORM_MINMAX, -1, Mat() );
+    // Set initial mask position to center of image
+    int maskX = gray.cols / 2;
+    int maskY = gray.rows / 2;
+    int maskWidth = 25;
+    int maskHeight = 25;
 
-    float diff = compareHist( hist_masked,hist_second_masked, 4);
-    cout << "value of diff is" <<  diff << "\n";
+    // Set threshold for histogram difference
+    float threshold = 0.95;
+    float range[] = { 0, 255 };
+    const float* histRange = { range };
 
-    //store intial diff
-    if(i==0){
-      diff_array[1] = diff;
+    // Initialize histograms
+    Mat currentHist, nextHist;
+    int channels[] = { 0 };
+
+    // Set step size for moving mask
+    int step = maskWidth;
+    int i = 0;
+    int nextX,nextY;
+    // Move mask in different directions
+    while (true) {
+        // Get current masked image
+        Rect roi(maskX, maskY, maskWidth, maskHeight);
+        if (roi.x < 0) roi.x = 0;
+        if (roi.y < 0) roi.y = 0;
+        if (roi.x + roi.width > gray.cols) roi.width = gray.cols - roi.x;
+        if (roi.y + roi.height > gray.rows) roi.height = gray.rows - roi.y;
+        Mat currentMask(gray, roi);
+
+        // Calculate histogram of current masked image
+        calcHist( &currentMask, 1, channels, Mat(), currentHist, 1, &maskWidth, &histRange);
+        nextX = maskX;
+        nextY = maskY;
+        nextX -= step;
+        nextY -= step;
+
+        if(nextY > gray.rows or nextX > gray.cols){
+            cout<<"Whiteboard not detected"<<endl;
+            break;
+        }
+
+
+        // Get next masked image
+        Rect roiNext(nextX, nextY, maskWidth, maskHeight);
+        if (roiNext.x < 0) roiNext.x = 0;
+        if (roiNext.y < 0) roiNext.y = 0;
+        if (roiNext.x + roiNext.width > gray.cols) roiNext.width = gray.cols - roiNext.x;
+        if (roiNext.y + roiNext.height > gray.rows) roiNext.height = gray.rows - roiNext.y;
+        Mat nextMask(gray, roiNext);
+        imshow("next",nextMask);
+        waitKey();
+        // Calculate histogram of next masked image
+        calcHist( &nextMask, 1, channels, Mat(), nextHist, 1, &maskWidth, &histRange,HISTCMP_INTERSECT);
+        // Compare histograms
+        double histDiff = compareHist(currentHist, nextHist, HISTCMP_BHATTACHARYYA);
+
+        cout << histDiff << "\n";
+           std::cout.flush();
+
+        // If histogram difference is above threshold, consider it an edge
+        if (histDiff > threshold and histDiff < 2*threshold and i>1) {
+            // Draw line on image
+            line(image, Point(maskX, maskY), Point(nextX, nextY), Scalar(0, 255, 0), 2);
+            break;
+        }
+        
+
+        // Update mask position
+        maskX = nextX;
+        maskY = nextY;
+        i = i+1;
     }
 
-    //add this loss as current loss
-    diff_array[2] = diff;
-    std::cout << diff_array[1] << " and: " << diff_array[2] << "\n";
-    //compute ratio between current loss and previous loss
-    float ratio = diff_array[2] / diff_array[1];
-    std::cout << "curent loss is: " << diff<< "\n";
-    
-    //if this ratio is higher than 0.8, this means that we don't improve a lot
-    //this threshold is user-defined
-    // if(i>2 and ratio > 1.50 or i>2 and ratio < 0.50){
-    //   std::cout << "Loss plateau reached !" << "\n";
-    //   imshow(window_name,second_masked);
-    //   waitKey();
-    //   break;
+    // Show image with lines
+    namedWindow("Edges", WINDOW_NORMAL);
+    cv::resizeWindow("Edges", 300, 300);
+    imshow("Edges", image);
+    waitKey();
 
-    // }
-    //if ratio threshold not reached, add this loss as previous loss
-    diff_array[1] = diff;
-  
-  }
+    return 0; 
 
-  //we declare the array as static
-  static double coord_array [4];
-  //the coordinate are the middle point of the second mask
-
-  coord_array[0] = (((input_to_detect.size().width)/2)+(i+1)*(input_to_detect.size().width)/size)+(input_to_detect.size().width)/(2*size);
-  coord_array[1] = (((input_to_detect.size().height)/2)-(i+1)*(input_to_detect.size().height)/size)+(input_to_detect.size().height)/(2*size);
-
-  return coord_array;
 }
 
 
@@ -365,19 +363,23 @@ int main( int argc, char** argv )
     cv::resizeWindow(window_name, 300, 300);
 
 
-    cv::Mat closed_image = adaptive_median_filtering("../323002414_443946944476613_815607096316111238_n.jpg");
-    //get address of coordinate:
-    double* detected;
-    detected =  histogram_change_detect(closed_image);
+    cv::Mat closed_image = adaptive_median_filtering("../323531059_3414989708821240_2898831769865535112_n.jpg");
+    // //get address of coordinate:
+    // Mat immm = imread("../323527929_737669997789369_8093382492363965159_n.jpg");
+    // //read image
+    // Mat closed_image;
+    // closed_image.convertTo(immm,  CV_32F, 1.0/255);
 
-    Point center(detected[0] , detected[1]);//Declaring the center point
-    int radius = 30; //Declaring the radius
-    Scalar line_Color(0, 0, 0);//Color of the circle
-    int thickness = 5;//thickens of the line
-    circle(closed_image, center,radius, line_Color, thickness);//Using circle()function to draw the line//
-    imshow(window_name, closed_image);//Showing the circle//
-    waitKey();
-    std::cout << detected[0] << "  " << detected[1] << "  "  ;
+    histogram_change_detect(closed_image);
+
+    // Point center(detected[0] , detected[1]);//Declaring the center point
+    // int radius = 30; //Declaring the radius
+    // Scalar line_Color(0, 0, 0);//Color of the circle
+    // int thickness = 5;//thickens of the line
+    // circle(closed_image, center,radius, line_Color, thickness);//Using circle()function to draw the line//
+    // imshow(window_name, closed_image);//Showing the circle//
+    // waitKey();
+    // std::cout << detected[0] << "  " << detected[1] << "  "  ;
     // cv::Mat image_after_otsu =  segment_otsu(closed_image);
     // imwrite("../allonsons.jpg",image_after_otsu);
     // cv::Mat detected_contour = detect_contour(closed_image);
