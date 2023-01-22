@@ -60,8 +60,13 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
   region_growing.cpp
   )
 
+  add_executable(whiteboard_recognition
+  whiteboard_recognition.cpp
+  )
 
-
+  add_executable(whiteboard_recognition_v2
+  whiteboard_recognition_v2.cpp
+  )
 
 
 # target_link_libraries( webcam_test ${OpenCV_LIBS} )
@@ -81,3 +86,8 @@ target_link_libraries( closing_adaptive ${OpenCV_LIBS} )
 target_link_libraries( template_matching ${OpenCV_LIBS} )
 
 target_link_libraries( detect_whiteboard  ${OpenCV_LIBS} )
+
+target_link_libraries( whiteboard_recognition  ${OpenCV_LIBS} )
+
+target_link_libraries( whiteboard_recognition_v2  ${OpenCV_LIBS} )
+
