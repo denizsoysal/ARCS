@@ -38,6 +38,7 @@ typedef struct iiwa_state_estimation_s{
 }iiwa_state_estimation_t; 
 
 typedef struct iiwa_state_estimation_params_s{
+    double low_pass_a;
     // logger implemented by spdlog
     std::shared_ptr<spdlog::logger> logger;
 }iiwa_state_estimation_params_t;
@@ -75,6 +76,7 @@ typedef struct iiwa_state_estimation_continuous_state_s{
     double estimated_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 
     // Variables for the averaging of the position measurements
+    double prev_jnt_vel[LBRState::NUMBER_OF_JOINTS];
     double jnt_vel_buffer[5][LBRState::NUMBER_OF_JOINTS]; //5 is the size of the averaging window, it might be modified
     int avg_buffer_ind;
     double jnt_vel_avg[LBRState::NUMBER_OF_JOINTS];

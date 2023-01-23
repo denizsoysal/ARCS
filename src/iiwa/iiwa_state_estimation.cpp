@@ -182,6 +182,8 @@ void iiwa_state_estimation_capability_configuration_compute(activity_t *activity
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
 	activity->state.lcsm_flags.capability_configuration_complete = true;
+
+	params->low_pass_a = 1/6;
 }
 
 void iiwa_state_estimation_capability_configuration(activity_t *activity){
@@ -235,6 +237,7 @@ void iiwa_state_estimation_running_communicate(activity_t *activity){
 
     // cache the previous values of vars
 	memcpy(state->jnt_pos_prev, state->local_meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
+	memcpy(state->prev_jnt_vel, state->jnt_vel_avg, sizeof(state->jnt_vel_avg));
 
     // Read the sensors from iiwa
 	pthread_mutex_lock(coord_state->sensor_lock);
@@ -294,15 +297,19 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 		continuous_state->meas_jnt_vel[i] = estimate_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i], (double) continuous_state->cycle_time_us / 1000000.0);
 
 		//Here we still have to filter the estimated velocity because it is very noisy
-		//Copying the new velocity measurement in the buffer
-		continuous_state->jnt_vel_buffer[continuous_state->avg_buffer_ind][i] = continuous_state->meas_jnt_vel[i];
-		//Computing the average velocity
-		// Moving average on the measurements
-		double sum = 0.0;
-		for (int j=0; j<5; j++){
-			sum += continuous_state->jnt_vel_buffer[j][i];
-		}
-		continuous_state->jnt_vel_avg[i] = sum/5.0;
+
+		// // Moving average approach
+		// //Copying the new velocity measurement in the buffer
+		// continuous_state->jnt_vel_buffer[continuous_state->avg_buffer_ind][i] = continuous_state->meas_jnt_vel[i];
+		// //Computing the average velocity
+		// double sum = 0.0;
+		// for (int j=0; j<5; j++){
+		// 	sum += continuous_state->jnt_vel_buffer[j][i];
+		// }
+		// continuous_state->jnt_vel_avg[i] = sum/5.0;
+
+		//Low pass filter approach
+		continuous_state->jnt_vel_avg[i] = (1-params->low_pass_a)*continuous_state->prev_jnt_vel[i] + params->low_pass_a*continuous_state->meas_jnt_vel[i];
 
 		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
@@ -330,7 +337,7 @@ void iiwa_state_estimation_running_communicate_write(activity_t *activity){
 	// copy the local cart_vel and pos to global variables
 	memcpy(&continuous_state->cart_pos, &continuous_state->local_cart_pos, sizeof(continuous_state->local_cart_pos));
 	memcpy(&continuous_state->cart_vel, &continuous_state->local_cart_vel, sizeof(continuous_state->local_cart_vel));
-	memcpy(continuous_state->estimated_jnt_vel, continuous_state->meas_jnt_vel, sizeof(continuous_state->meas_jnt_vel));
+	memcpy(continuous_state->estimated_jnt_vel, continuous_state->jnt_vel_avg, sizeof(continuous_state->jnt_vel_avg));
 	pthread_mutex_unlock(&coord_state->estimate_lock);
 }
 
