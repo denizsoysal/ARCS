@@ -49,7 +49,7 @@ typedef struct navigation_continuous_state_s{
     KDL::Vector *set_pos;
 
     KDL::Vector heading;
-    double velocity;
+    double velocity_magnitude;
 }navigation_continuous_state_t;
 
 //! (computational) discrete state

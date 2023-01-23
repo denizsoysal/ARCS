@@ -180,6 +180,8 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		params->abag_params.sat_low = -1;
 
         // parameters from paper
+		// TODO we should set alpha to remove the moving avg filter here eventually
+		// TODO we should do all filtering in the estimation
 		params->abag_params.alpha = 0.75;
 		params->abag_params.bias_thresh = 0.75;
 		params->abag_params.delta_bias = 0.001;
@@ -359,26 +361,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 			params->logger->info("gain, {}", continuous_state->abag_state.gain);
 			params->logger->info("control, {}", continuous_state->abag_state.control);
 
-			params->logger->info("meas_jnt_pos[0], {}", continuous_state->local_meas_jnt_pos[0]);
-			params->logger->info("meas_jnt_pos[1], {}", continuous_state->local_meas_jnt_pos[1]);
-			params->logger->info("meas_jnt_pos[2], {}", continuous_state->local_meas_jnt_pos[2]);
-			params->logger->info("meas_jnt_pos[3], {}", continuous_state->local_meas_jnt_pos[3]);
-			params->logger->info("meas_jnt_pos[4], {}", continuous_state->local_meas_jnt_pos[4]);
-			params->logger->info("meas_jnt_pos[5], {}", continuous_state->local_meas_jnt_pos[5]);
-			params->logger->info("meas_jnt_pos[6], {}", continuous_state->local_meas_jnt_pos[6]);
-
-			params->logger->info("meas_jnt_vel[0], {}", continuous_state->meas_jnt_vel[0]);
-			params->logger->info("meas_jnt_vel[1], {}", continuous_state->meas_jnt_vel[1]);
-			params->logger->info("meas_jnt_vel[2], {}", continuous_state->meas_jnt_vel[2]);
-			params->logger->info("meas_jnt_vel[3], {}", continuous_state->meas_jnt_vel[3]);
-			params->logger->info("meas_jnt_vel[4], {}", continuous_state->meas_jnt_vel[4]);
-			params->logger->info("meas_jnt_vel[5], {}", continuous_state->meas_jnt_vel[5]);
-			params->logger->info("meas_jnt_vel[6], {}", continuous_state->meas_jnt_vel[6]);
-
 			params->logger->info("local_vx, {}", local_v.vel(0));
 			params->logger->info("local_vy, {}", local_v.vel(1));
 			params->logger->info("local_vz, {}", local_v.vel(2));
-			params->logger->info("cycle_time_us, {}", continuous_state->cycle_time_us);
 
 			break;
 		}
