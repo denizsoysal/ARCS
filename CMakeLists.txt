@@ -97,6 +97,7 @@ add_library(${PROJECT_NAME} SHARED
     src/navigation.cpp
     src/iiwa/iiwa_controller.cpp
     src/iiwa/iiwa_virtual.cpp
+    src/iiwa/iiwa_state_estimation.cpp
     src/task_mediator/task_mediator.cpp
     src/task_mediator/task_mediator_petrinet.cpp
 )

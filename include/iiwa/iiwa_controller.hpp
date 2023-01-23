@@ -94,10 +94,10 @@ typedef struct iiwa_controller_params_s{
 
 // Continuous state which is the state of the controller system, including input and output signals
 typedef struct iiwa_controller_continuous_state_s{
-    // Input signals from arm sensors (pointers to first elements in array)
-    double 	*meas_jnt_pos;
-    double 	*meas_torques;
-	double 	*meas_ext_torques;
+    // Input signals from the estimation activity
+    KDL::FrameVel *cart_vel;
+    KDL::Frame *cart_pos;
+    double (*jnt_vel)[LBRState::NUMBER_OF_JOINTS]; //this syntax is to create a pointer that points not only to the 0th element of an array but to the complete array
 
     // Output signals to iiwa 
 	double	*cmd_jnt_vel;
@@ -105,31 +105,12 @@ typedef struct iiwa_controller_continuous_state_s{
 	double	*cmd_wrench;
 
     // Local copies of inputs and outputs will be deep copied with memcpy()
-    double  local_meas_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    double  local_meas_torques[LBRState::NUMBER_OF_JOINTS];
-	double  local_meas_ext_torques[LBRState::NUMBER_OF_JOINTS];
+    KDL::FrameVel local_cart_vel;
+    KDL::Frame local_cart_pos;
+    double  local_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_wrench[CART_VECTOR_DIM];
-
-    KDL::JntArray local_q;
-    KDL::JntArrayVel local_qd;
-    KDL::FrameVel local_cartvel;
-
-    // "State" Parameters which are computed in the activity
-    double jnt_pos_prev[LBRState::NUMBER_OF_JOINTS];
-    double meas_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-
-    // Variables for the averaging of the position measurements
-    double jnt_pos_buffer[5][LBRState::NUMBER_OF_JOINTS]; //5 is the size of the averaging window, it might be modified
-    int avg_buffer_ind;
-    double jnt_pos_avg[LBRState::NUMBER_OF_JOINTS];
-    double jnt_pos_prev_avg[LBRState::NUMBER_OF_JOINTS];
-
-    // Data structures for time
-    struct timespec prev_timespec;
-    struct timespec current_timespec;
-    long cycle_time_us; //cycle time in microseconds
 
     // Data structures for control algorithms
     abag_state_t abag_state;
@@ -149,12 +130,10 @@ typedef struct iiwa_controller_coordination_state_s {
     bool commanding_not_active;
 
     // Mutex
-    pthread_mutex_t *sensor_lock, *actuation_lock, goal_lock;
+    pthread_mutex_t *estimate_lock, *actuation_lock, goal_lock;
 
     // First run compute cycle
-    bool first_run_compute_cycle;
-    //first read of the sensors
-    bool buffer_initialized;
+    bool first_run_compute_cycle; //still need to check whether it is required
 } iiwa_controller_coordination_state_t;
 
 extern const iiwa_controller_t ec_iiwa_controller;
@@ -169,15 +148,6 @@ template <typename T> int hside(T val);
 template <typename T> T saturate(T val, T sat_low, T sat_high);
     
 /**
- * Compute the difference in microseconds between two timespecs.
- * 
- * @param *current_timespec from timespec_get()
- * @param *previous_timespec from timespec_get()
- * @return the time difference in microseconds from current-previous. 
-*/   
-long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec);
-
-/**
  * ABAG Controller, implementation similar to:
  * 
  * "Adaptive Closed-loop Speed Control of BLDC Motors with Applications to Multi-rotor Aerial Vehicles"
@@ -187,7 +157,5 @@ long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_ti
  * This gives a positive control signal uk when the value is less than the setpoint.
 */
 void abag(abag_params_t *params, abag_state_t *state, double val, double setpoint);
-
-double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time);
 
 #endif //iiwa_controller_HPP

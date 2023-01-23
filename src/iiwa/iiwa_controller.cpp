@@ -29,9 +29,6 @@
 #include "iiwa/iiwa_controller.hpp"
 
 KDL::Chain iiwa_robot_kdl=KDL::KukaIIWA14();
-// Vector gravity = Vector(0.0,0.0,-9.81);
-KDL::ChainFkSolverPos_recursive fksolver(iiwa_robot_kdl);
-KDL::ChainFkSolverVel_recursive velksolver(iiwa_robot_kdl);
 
 // TODO create local fsm states
 #define WAIT 0
@@ -101,8 +98,6 @@ void iiwa_controller_creation_configure(activity_t *activity){
 void iiwa_controller_creation_compute(activity_t *activity){
 	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
     activity->fsm = (FSM_t *) malloc(sizeof(FSM_t));
-    cts_state->local_q = KDL::JntArray(LBRState::NUMBER_OF_JOINTS);
-	cts_state->local_qd = KDL::JntArrayVel(LBRState::NUMBER_OF_JOINTS);
 
 	activity->state.lcsm_flags.creation_complete = true;
 }
@@ -196,8 +191,6 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		cts_state->abag_state.gain = 0.0;
 		cts_state->abag_state.control = 0.0;
 		cts_state->abag_state.ek_bar = 0.0;
-
-		coord_state->buffer_initialized = false;
 	}
 }
 
@@ -260,16 +253,12 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	iiwa_controller_continuous_state_t* state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
-    // cache the previous values of vars
-	memcpy(state->jnt_pos_prev, state->local_meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
-	memcpy(state->jnt_pos_prev_avg, state->jnt_pos_avg, sizeof(state->jnt_pos_avg));
-
-    // Read the sensors from iiwa
-	pthread_mutex_lock(coord_state->sensor_lock);
-	memcpy(state->local_meas_torques, state->meas_torques, sizeof(state->local_meas_torques));
-	memcpy(state->local_meas_jnt_pos, state->meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
-    memcpy(state->local_meas_ext_torques, state->meas_ext_torques, sizeof(state->local_meas_ext_torques));
-	pthread_mutex_unlock(coord_state->sensor_lock);
+    // Read the state estimation from the state estimation activity
+	pthread_mutex_lock(coord_state->estimate_lock);
+	memcpy(&state->local_cart_pos, state->cart_pos, sizeof(state->local_cart_pos));
+	memcpy(&state->local_cart_vel, state->cart_vel, sizeof(state->local_cart_vel));
+	memcpy(state->local_jnt_vel, state->jnt_vel, sizeof(state->local_jnt_vel));
+	pthread_mutex_unlock(coord_state->estimate_lock);
 
     // read goals from other, depending on control mode
     pthread_mutex_lock(&coord_state->goal_lock);
@@ -284,19 +273,6 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 		case(TORQUE): break;
 	}
     pthread_mutex_unlock(&coord_state->goal_lock);
-
-	//copying the read value in the buffer for the averaging
-	memcpy(state->jnt_pos_buffer[state->avg_buffer_ind], state->local_meas_jnt_pos, sizeof(state->local_cmd_jnt_vel));
-	//state->jnt_pos_buffer[state->avg_buffer_ind] = state->local_meas_jnt_pos;
-	state->avg_buffer_ind = (state->avg_buffer_ind+1)%5;
-
-	// The buffer is completely filled if it is the first iteration
-	if (coord_state->buffer_initialized == false){
-		for (unsigned int i=0;i<5;i++){
-			memcpy(state->jnt_pos_buffer[i], state->local_meas_jnt_pos, sizeof(state->local_meas_jnt_pos));
-		}
-		coord_state->buffer_initialized = true;
-	}	
 }
 
 void iiwa_controller_running_communicate_write(activity_t *activity){
@@ -352,51 +328,6 @@ void iiwa_controller_running_compute(activity_t *activity){
 	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
 	KDL::Twist local_v;
 
-    // get the current timestamp and compute the current cycle time. 
-	if (coord_state->first_run_compute_cycle){
-		coord_state->first_run_compute_cycle = false;
-		timespec_get(&continuous_state->current_timespec, TIME_UTC);
-		continuous_state->cycle_time_us = 0;
-		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
-		    sizeof(continuous_state->current_timespec));
-	}else{
-		timespec_get(&continuous_state->current_timespec, TIME_UTC);
-		continuous_state->cycle_time_us = difftimespec_us(&continuous_state->current_timespec, 
-		    &continuous_state->prev_timespec);
-		memcpy(&continuous_state->prev_timespec, &continuous_state->current_timespec,
-		    sizeof(continuous_state->current_timespec));
-	}
-
-	// // Moving average on the measurements
-	// for (unsigned int j=0;j<LBRState::NUMBER_OF_JOINTS;j++){
-	// 	double sum = 0.0;
-	// 	for (int i=0; i<5; i++){
-	// 		sum += continuous_state->jnt_pos_buffer[i][j];
-	// 	}
-	// 	continuous_state->jnt_pos_avg[j] = sum/5.0;
-	// }
-
-	// compute the joint velocities
-	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->local_meas_jnt_pos[i], continuous_state->jnt_pos_prev[i],
-		    (double) continuous_state->cycle_time_us / 1000000.0);
-
-		// write the joint positions and velocities to the JntArray
-		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
-		continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
-
-	// 	//this is not working
-	// 	continuous_state->meas_jnt_vel[i] = compute_velocity(continuous_state->jnt_pos_avg[i], continuous_state->jnt_pos_prev_avg[i],
-	// 	    (double) continuous_state->cycle_time_us / 1000000.0);
-		
-	// 	// write the joint positions and velocities to the JntArray
-	// 	continuous_state->local_qd.q(i) = continuous_state->jnt_pos_avg[i];
-	// 	continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
-	}
-
-    // Forward velocity kinematics
-	velksolver.JntToCart(continuous_state->local_qd, continuous_state->local_cartvel);
-	
 	switch(params->cmd_mode){
 		case(POSITION):
 		{
@@ -406,13 +337,13 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(WRENCH):
 		{	
             // extract the z component
-			local_v = continuous_state->local_cartvel.GetTwist();
+			local_v = continuous_state->local_cart_vel.GetTwist();
 			abag(&params->abag_params, &continuous_state->abag_state, 0.05, -1*local_v.vel(2));
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
 				// update the 'spring' position here. 
-				continuous_state->local_cmd_jnt_vel[i] = continuous_state->meas_jnt_vel[i];
+				continuous_state->local_cmd_jnt_vel[i] = continuous_state->local_jnt_vel[i];
 			}
 			for (unsigned int i=0;i<6;i++)
 			{
@@ -454,7 +385,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 		case(TORQUE):
 		{
 			// local cmd torque = max_torque * control E [-1, 1]
-			abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->meas_jnt_vel[6]);
+			abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->local_jnt_vel[6]);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 			{
@@ -572,35 +503,4 @@ template <typename T> T saturate(T val, T sat_low, T sat_high){
 		val = sat_low;
 	}
     return val;
-}
-
-long difftimespec_us(struct timespec *current_timespec, struct timespec *prev_timespec){
-    long difftimespec_us; // cycle time in microseconds
-	double diff_s;
-	long diff_ns;
-
-	diff_s = difftime(current_timespec->tv_sec, prev_timespec->tv_sec);
-	diff_ns = current_timespec->tv_nsec - prev_timespec->tv_nsec;
-
-	difftimespec_us =  (long) diff_s * 1000000 + diff_ns / 1000;
-
-	return difftimespec_us;
-}
-
-double compute_velocity(double meas_jnt_pos, double prev_jnt_pos, double cycle_time){
-	double vel;
-
-	if (cycle_time == 0.0) vel = 0.0;
-	else vel = (meas_jnt_pos - prev_jnt_pos) / cycle_time;
-
-	return vel;
-}
-
-// Function to get the cartesian position of the end_effector expressed in the inertial frame (located at the bottom of the bimanual support)
-void compute_inertial_pos(activity_t *activity){
-	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
-	KDL::Frame arm_base_cartpos;
-	fksolver.JntToCart(continuous_state->local_q, arm_base_cartpos);
-	std::cout<< "Position in arm_base frame: " << arm_base_cartpos <<std::endl;
-	//Need to map the coordinates from the arm_base frame to the inertial frame
 }
