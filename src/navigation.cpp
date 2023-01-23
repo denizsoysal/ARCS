@@ -205,7 +205,6 @@ void navigation_register_schedules(activity_t *activity){
 void navigation_create_lcsm(activity_t* activity, const char* name_activity){
     activity->conf.params = malloc(sizeof(navigation_params_t));
     activity->state.computational_state.continuous = malloc(sizeof(navigation_continuous_state_t));
-    activity->state.computational_state.discrete = malloc(sizeof(navigation_discrete_state_t));
     activity->state.coordination_state = malloc(sizeof(navigation_coordination_state_t));
 }
 

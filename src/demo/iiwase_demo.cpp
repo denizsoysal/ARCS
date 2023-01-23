@@ -196,8 +196,8 @@ int main(int argc, char**argv){
 	auto estimation_logger = std::make_shared<spdlog::logger>("iiwa_state_estimation", shared_file_sink);
     iiwa_estimation_params->logger = estimation_logger;
 
-	auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);
-    navigation_params->logger = navigation_logger;
+	// auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);
+    // navigation_params->logger = navigation_logger;
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
