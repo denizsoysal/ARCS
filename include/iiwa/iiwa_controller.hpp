@@ -84,7 +84,7 @@ typedef struct iiwa_controller_params_s{
 
     // parameter for bounding the capability of the controller
     double max_torque;
-    double max_wrench;
+    double max_force;
 
     abag_params_t abag_params;
 
@@ -99,6 +99,10 @@ typedef struct iiwa_controller_continuous_state_s{
     KDL::Frame *cart_pos;
     double (*jnt_vel)[LBRState::NUMBER_OF_JOINTS]; //this syntax is to create a pointer that points not only to the 0th element of an array but to the complete array
 
+    // Input from the navigation activity
+    KDL::Vector *heading;
+    double *velocity_magnitude;
+
     // Output signals to iiwa 
 	double	*cmd_jnt_vel;
 	double	*cmd_torques;
@@ -111,6 +115,8 @@ typedef struct iiwa_controller_continuous_state_s{
 	double	local_cmd_jnt_vel[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_torques[LBRState::NUMBER_OF_JOINTS];
 	double	local_cmd_wrench[CART_VECTOR_DIM];
+    KDL::Vector local_heading;
+    double local_velocity_magnitude;
 
     // Data structures for control algorithms
     abag_state_t abag_state;
@@ -130,7 +136,7 @@ typedef struct iiwa_controller_coordination_state_s {
     bool commanding_not_active;
 
     // Mutex
-    pthread_mutex_t *estimate_lock, *actuation_lock, goal_lock;
+    pthread_mutex_t *estimate_lock, *actuation_lock, *navigation_lock, goal_lock;
 
     // First run compute cycle
     bool first_run_compute_cycle; //still need to check whether it is required

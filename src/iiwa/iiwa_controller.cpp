@@ -173,7 +173,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 
 		// Configure controller for running state
 		params->max_torque = 2.0;
-		params->max_wrench = 5.0;
+		params->max_force = 5.0;
 
 		// Configure ABAG Controller
 		params->abag_params.sat_high = 1;
@@ -275,6 +275,11 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 		case(TORQUE): break;
 	}
     pthread_mutex_unlock(&coord_state->goal_lock);
+
+	pthread_mutex_lock(coord_state->navigation_lock);
+	memcpy(&state->local_heading, state->heading, sizeof(state->heading));
+    state->local_velocity_magnitude = *state->velocity_magnitude;
+	pthread_mutex_unlock(coord_state->navigation_lock);
 }
 
 void iiwa_controller_running_communicate_write(activity_t *activity){
@@ -323,12 +328,15 @@ void iiwa_controller_running_configure(activity_t *activity){
 
 void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
-	iiwa_controller_continuous_state_t *continuous_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
 
 	double cmd_vel;
-	double prev_cmd_vel = continuous_state->local_cmd_jnt_vel[6];
-	KDL::Twist local_v;
+	double prev_cmd_vel = cts_state->local_cmd_jnt_vel[6];
+	KDL::Twist local_vel;
+	KDL::Vector projected_vel;
+	KDL::Vector end_effector_heading;
+	KDL::Vector end_effector_force;
 
 	switch(params->cmd_mode){
 		case(POSITION):
@@ -338,48 +346,55 @@ void iiwa_controller_running_compute(activity_t *activity){
 		}
 		case(WRENCH):
 		{	
-            // extract the z component
-			local_v = continuous_state->local_cart_vel.GetTwist();
-			abag(&params->abag_params, &continuous_state->abag_state, 0.05, -1*local_v.vel(2));
-
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++)
 			{
 				// update the 'spring' position here. 
-				continuous_state->local_cmd_jnt_vel[i] = continuous_state->local_jnt_vel[i];
+				cts_state->local_cmd_jnt_vel[i] = cts_state->local_jnt_vel[i];
 			}
-			for (unsigned int i=0;i<6;i++)
+			local_vel = cts_state->local_cart_vel.GetTwist();
+
+			// Project the cartesian velocity of the end effector onto the heading and pass Norm to ABAG as current state
+            projected_vel = KDL::dot(local_vel.vel, cts_state->local_heading) * cts_state->local_heading 
+				            / pow(cts_state->local_heading.Norm(), 2);           
+			abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm());
+
+            // Now rotate the global cartesian force into the end effector frame
+			end_effector_heading = cts_state->local_cart_pos.M * cts_state->local_heading;
+			end_effector_force = params->max_force * cts_state->abag_state.control * end_effector_heading;
+
+            // TODO remove once we have the orientation ABAG and the direction ABAG
+     		for (unsigned int i=0;i<6;i++)
 			{
-				continuous_state->local_cmd_wrench[i] = 0.0;
+				if (i<3){
+                    cts_state->local_cmd_wrench[i] = end_effector_force(i);
+				} else {
+     				cts_state->local_cmd_wrench[i] = 0.0;
+				}
 			}
-			continuous_state->local_cmd_wrench[2] = params->max_wrench * continuous_state->abag_state.control; 
 
             // LOGGING
-			params->logger->info("wrench_z, {}", continuous_state->local_cmd_wrench[2]);
+			params->logger->info("wrench_z, {}", cts_state->local_cmd_wrench[2]);
 
-			params->logger->info("ek_bar, {}", continuous_state->abag_state.ek_bar);
-			params->logger->info("bias, {}", continuous_state->abag_state.bias);
-			params->logger->info("gain, {}", continuous_state->abag_state.gain);
-			params->logger->info("control, {}", continuous_state->abag_state.control);
-
-			params->logger->info("local_vx, {}", local_v.vel(0));
-			params->logger->info("local_vy, {}", local_v.vel(1));
-			params->logger->info("local_vz, {}", local_v.vel(2));
+			params->logger->info("ek_bar, {}", cts_state->abag_state.ek_bar);
+			params->logger->info("bias, {}", cts_state->abag_state.bias);
+			params->logger->info("gain, {}", cts_state->abag_state.gain);
+			params->logger->info("control, {}", cts_state->abag_state.control);
 
 			break;
 		}
 		case(TORQUE):
 		{
 			// local cmd torque = max_torque * control E [-1, 1]
-			abag(&params->abag_params, &continuous_state->abag_state, 0.1, continuous_state->local_jnt_vel[6]);
+			abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6]);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 			{
-				continuous_state->local_cmd_jnt_vel[i] = 0.0;
-				continuous_state->local_cmd_torques[i] = 0.0;
+				cts_state->local_cmd_jnt_vel[i] = 0.0;
+				cts_state->local_cmd_torques[i] = 0.0;
 			}
-			continuous_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
-			continuous_state->local_cmd_torques[6] = params->max_torque * continuous_state->abag_state.control; 
-			printf("In torque control, cmd: %f \n", continuous_state->local_cmd_torques[6]);
+			cts_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
+			cts_state->local_cmd_torques[6] = params->max_torque * cts_state->abag_state.control; 
+			printf("In torque control, cmd: %f \n", cts_state->local_cmd_torques[6]);
 			break;
 		}
 	}

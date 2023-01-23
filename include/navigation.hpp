@@ -9,8 +9,8 @@
  * @date September 15, 2022
  **/
 
-#ifndef iiwa_controller_HPP
-#define iiwa_controller_HPP
+#ifndef iiwa_navigation_HPP
+#define iiwa_navigation_HPP
 
 #include <stdio.h>
 #include <pthread.h>
@@ -45,7 +45,7 @@ typedef struct navigation_params_s{
 
 typedef struct navigation_continuous_state_s{
     // shared variables to be read from other activity
-    KDL::Vector *end_effector_pos;
+    KDL::Frame *end_effector_pos;
     KDL::Vector *set_pos;
 
     KDL::Vector heading;

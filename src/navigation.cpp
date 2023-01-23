@@ -102,14 +102,11 @@ void navigation_running_communicate(activity_t *activity){
     pthread_mutex_lock(coord_state->estimation_lock);
     // pthread_mutex_lock(coord_state->setpoint_lock);
     pthread_mutex_lock(&coord_state->navigation_lock);
-    cts_state->heading = *cts_state->set_pos - *cts_state->end_effector_pos;
+    cts_state->heading = *cts_state->set_pos - (*cts_state->end_effector_pos).p;
     pthread_mutex_unlock(coord_state->estimation_lock);
     // pthread_mutex_unlock(coord_state->setpoint_lock);
 
-    heading_norm = cts_state->heading.Norm();
-    // Manually set the heading for now
-    // cts_state->heading = cts_state->heading.Normalize();
-    cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
+    heading_norm = cts_state->heading.Normalize();
 
     if(heading_norm > params->slowdown_threshold){
         cts_state->velocity_magnitude = params->fast_vel;
@@ -118,6 +115,11 @@ void navigation_running_communicate(activity_t *activity){
     }else{
         cts_state->velocity_magnitude = 0;
     }
+    
+    // Manually set the heading for now
+    cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
+    cts_state->velocity_magnitude = 0.05;
+
     pthread_mutex_unlock(&coord_state->navigation_lock);
 }
 
