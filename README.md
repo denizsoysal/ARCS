@@ -1,58 +1,65 @@
 # ARCS
-Repo for the ARCS course @KUL
 
-# Problem Description
-- description of the whiteboard erasing problem
-- link to the industrial application of concrete scraping
+## Project Goal
 
-# Minimum Viable Product Description
+See docs/project_description.md for more details.
 
-1. Erase a perfectly oriented whiteboard with bimanual coordination
-  - classify a board as dirty
-  - identify the dirty areas of the board
-  - use orientation of dirty areas to decide between left or right dominant asymmetric motions
-  - grasp the board on the top edge with one hand
-  - move the over arm over the surface of the board to erase
-  - confirm that board has been cleaned
+The goal is to erase characters off of a whiteboard using a bimanual robot arm system. This involves the following "skills":
 
-## Possible Future Work
+1. Classify a whiteboard as clean or dirty.
+2. Identify dirty areas of the whiteboard that require cleaning.
+3. Grasp the whiteboard with a free arm so that it will not move while erasing.
+4. Move a cleaning tool (eraser) along the surface of the whiteboard to clean dirty regions with the other arm.
+5. Check whether the attempted erasing action was successful.
 
-2. Start with a skewed board and orient in space
-3. Introduce more functionality into erasing specific areas or characters on the board
+The followoing is a description of what has been implemented thus far.
 
-# High Level Task State Machine
+# Architecture of Activities
 
-# World Model for the MVP
+<img src="docs/figs/activity_architecture.svg">
 
-- what is in our world?
+This figure is a layout of the **currently implemented** activity architecture in the iiwase project. The headers of the objects provide the activity name, as well as the thread time for the activity. The rows below the header provide important variables which are present in each activity. The arrows indicate a "modifies" relation, where the value of a variable in one activity is copied to the destination variable in a different activity. Provided below is a high level description of the activities used, and their respective responsibilities. 
 
-## Objects
+## perception
+TODO...
 
-1. Whiteboard
-2. Markings on the whiteboard
-3. Each Arm and End Effector
-4. Humans
+## iiwa_activity
+- real time communication with the KUKA FRI and Sunrise workbench.
+- determines the cmd mode (Position, JntTorque, or Wrench).
+- Provides reading of the sensor data and communication of actuation commands back to the iiwa. 
 
-## Object Features
+## iiwa_estimation
+- filtering of noisy joint position encoder readings to estimate the state of the robot (real joint positions, joint velocities)
+- differentiates the joint positions to obtain joint velocities. This involves measuring it's own cycle time.
+- Performs forward kinematics to determine the cartesian positions and velocities of the robot. 
 
-### Whiteboard
-- surface which contains markings
-- edge to grasp
+## navigation
+- responsible for specifying the type motion that the arm should conduct.
+- The motion is specified by a heading vector (in the base frame) which is a direction that the arm must move in, and a velocity magnitude which it should be moving.
+- the navigation activity is the interface with the perception activity which sends positions where the arm should be heading in order to accomplish this task. 
 
-## Sensor Features and Representation
+## iiwa_controller
+- Sends wrench commands to the iiwa activity in order to achieve the desired heading and velocity magnitude. 
+- Implements a thresholded adaptive controller (ABAG) to ensure that force applied at end effector is always "human safe" and only applies force in the necessary direction for the task. 
 
-### Whiteboard
-- edges of whiteboard
-- color of the whiteboard
+# Perception
+TODO
 
-# Lower Level Activity State Machines
+# Control 
 
-- outline the "state collections" of the lower level activities
+## Implementation Details (TODO)
 
-## Necessary Flags For Each Activity
+Key attributes to explain "why?":
+1. Force Based Cartesian Velocity Control
+  - why don't we use position or velocity control?
+  - why is velocity the best choice for deriving an error signal and closing the loop?
+2. ABAG control law on determining the force to apply at the end effector
+  - why not use PID
+  - why use 2 ABAG controllers (1 for position, 1 for orientation) instead of 6 (1 for each DoF)
+3. Estimation of the velocity of the end effector
+  - why do we need filtering?
+  - what type of filter do we choose and why?
 
-# Petri Nets
-
-# Physical Setup
-- positions of arms
-- sensor selection and orientation in space
+## Future Implementation (TODO)
+- orientation control with another ABAG
+- orientation of the entire robot arm to avoid singularities and position better to sense forces
