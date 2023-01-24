@@ -67,7 +67,7 @@ typedef struct iiwa_controller_params_s{
     double max_torque;
     double max_force;
 
-    abag_params_t abag_params;
+    abag_params_t abag_params_cartesian;
 
     // logger implemented by spdlog
     std::shared_ptr<spdlog::logger> logger;
@@ -100,7 +100,9 @@ typedef struct iiwa_controller_continuous_state_s{
     double local_velocity_magnitude;
 
     // Data structures for control algorithms
-    abag_state_t abag_state;
+    abag_state_t abag_state_x;
+    abag_state_t abag_state_y;
+    abag_state_t abag_state_z;
 }iiwa_controller_continuous_state_t;
 
 //! (computational) discrete state

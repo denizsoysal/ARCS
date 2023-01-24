@@ -178,23 +178,33 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
 		params->max_force = 5.0;
 
 		// Configure ABAG Controller
-		params->abag_params.sat_high = 1;
-		params->abag_params.sat_low = -1;
+		params->abag_params_cartesian.sat_high = 1;
+		params->abag_params_cartesian.sat_low = -1;
 
         // parameters from paper
 		// TODO we should set alpha to remove the moving avg filter here eventually
 		// TODO we should do all filtering in the estimation
-		params->abag_params.alpha = 0.75;
-		params->abag_params.bias_thresh = 0.75;
-		params->abag_params.delta_bias = 0.001;
-		params->abag_params.gain_thresh = 0.5;
-		params->abag_params.delta_gain = 0.001;
+		params->abag_params_cartesian.alpha = 0.75;
+		params->abag_params_cartesian.bias_thresh = 0.75;
+		params->abag_params_cartesian.delta_bias = 0.001;
+		params->abag_params_cartesian.gain_thresh = 0.5;
+		params->abag_params_cartesian.delta_gain = 0.001;
 		
 		// ABAG states need to be initialized to 0
-		cts_state->abag_state.bias = 0.0;
-		cts_state->abag_state.gain = 0.0;
-		cts_state->abag_state.control = 0.0;
-		cts_state->abag_state.ek_bar = 0.0;
+		cts_state->abag_state_x.bias = 0.0;
+		cts_state->abag_state_x.gain = 0.0;
+		cts_state->abag_state_x.control = 0.0;
+		cts_state->abag_state_x.ek_bar = 0.0;
+
+		cts_state->abag_state_y.bias = 0.0;
+		cts_state->abag_state_y.gain = 0.0;
+		cts_state->abag_state_y.control = 0.0;
+		cts_state->abag_state_y.ek_bar = 0.0;
+
+		cts_state->abag_state_z.bias = 0.0;
+		cts_state->abag_state_z.gain = 0.0;
+		cts_state->abag_state_z.control = 0.0;
+		cts_state->abag_state_z.ek_bar = 0.0;
 	}
 }
 
@@ -342,14 +352,25 @@ void iiwa_controller_running_compute(activity_t *activity){
 			}
 			local_vel = cts_state->local_cart_vel.GetTwist();
 
+            // ### ARCS DISCUSSION POINT ### //
 			// Project the cartesian velocity of the end effector onto the heading and pass Norm to ABAG as current state
-            projected_vel = KDL::dot(local_vel.vel, cts_state->local_heading) * cts_state->local_heading 
-				            / pow(cts_state->local_heading.Norm(), 2);           
-			abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm());
+            // projected_vel = KDL::dot(local_vel.vel, cts_state->local_heading) * cts_state->local_heading 
+			// 	            / pow(cts_state->local_heading.Norm(), 2);           
+
+			// 
+			// abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm());
+			// end_effector_force = params->max_force * cts_state->abag_state_x.control * end_effector_heading;
+
+			// Implement 3 separate abag controllers for x, y, z
+			abag(&params->abag_params_cartesian, &cts_state->abag_state_x, cts_state->local_velocity_magnitude * cts_state->local_heading[0], local_vel[0]);
+			abag(&params->abag_params_cartesian, &cts_state->abag_state_y, cts_state->local_velocity_magnitude * cts_state->local_heading[1], local_vel[1]);
+			abag(&params->abag_params_cartesian, &cts_state->abag_state_z, cts_state->local_velocity_magnitude * cts_state->local_heading[2], local_vel[2]);
 
             // Now rotate the global cartesian force into the end effector frame
-			end_effector_heading = cts_state->local_cart_pos.M * cts_state->local_heading;
-			end_effector_force = params->max_force * cts_state->abag_state.control * end_effector_heading;
+			end_effector_force[0] = params->max_force * cts_state->abag_state_x.control;
+			end_effector_force[1] = params->max_force * cts_state->abag_state_y.control;
+			end_effector_force[2] = params->max_force * cts_state->abag_state_z.control;
+			end_effector_heading = cts_state->local_cart_pos.M * end_effector_force;
 
             // TODO remove once we have the orientation ABAG and the direction ABAG
      		for (unsigned int i=0;i<6;i++)
@@ -366,17 +387,17 @@ void iiwa_controller_running_compute(activity_t *activity){
 			params->logger->info("wrench_y,{}", cts_state->local_cmd_wrench[1]);
 			params->logger->info("wrench_z,{}", cts_state->local_cmd_wrench[2]);
 
-			params->logger->info("ek_bar,{}", cts_state->abag_state.ek_bar);
-			params->logger->info("bias,{}", cts_state->abag_state.bias);
-			params->logger->info("gain,{}", cts_state->abag_state.gain);
-			params->logger->info("control,{}", cts_state->abag_state.control);
+			// params->logger->info("ek_bar,{}", cts_state->abag_state.ek_bar);
+			// params->logger->info("bias,{}", cts_state->abag_state.bias);
+			// params->logger->info("gain,{}", cts_state->abag_state.gain);
+			// params->logger->info("control,{}", cts_state->abag_state.control);
 
 			break;
 		}
 		case(TORQUE):
 		{
 			// local cmd torque = max_torque * control E [-1, 1]
-			abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6]);
+			// abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6]);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 			{
@@ -384,7 +405,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 				cts_state->local_cmd_torques[i] = 0.0;
 			}
 			cts_state->local_cmd_jnt_vel[6] = 0.0; // TODO do I need to update this parameter
-			cts_state->local_cmd_torques[6] = params->max_torque * cts_state->abag_state.control; 
+			// cts_state->local_cmd_torques[6] = params->max_torque * cts_state->abag_state.control; 
 			printf("In torque control, cmd: %f \n", cts_state->local_cmd_torques[6]);
 			break;
 		}
