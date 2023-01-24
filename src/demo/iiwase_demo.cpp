@@ -191,11 +191,14 @@ int main(int argc, char**argv){
 	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e,%n,%l,%v");
 
     auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
+	auto estimation_logger = std::make_shared<spdlog::logger>("estimation", shared_file_sink);
     auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);
 	spdlog::register_logger(controller_logger);
+	spdlog::register_logger(estimation_logger);
 	spdlog::register_logger(navigation_logger);
 
     iiwa_controller_params->logger = spdlog::get("iiwa_controller");
+	iiwa_estimation_params->logger = spdlog::get("estimation");
 	navigation_params->logger = spdlog::get("navigation");
 
 	// ### THREADS ### //
