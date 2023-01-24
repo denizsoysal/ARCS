@@ -357,7 +357,7 @@ void iiwa_state_estimation_running_communicate_write(activity_t *activity){
 	// copy the local cart_vel and pos to global variables
 	memcpy(&continuous_state->cart_pos, &continuous_state->local_cart_pos, sizeof(continuous_state->local_cart_pos));
 	memcpy(&continuous_state->cart_vel, &continuous_state->local_cart_vel, sizeof(continuous_state->local_cart_vel));
-	memcpy(continuous_state->estimated_jnt_vel, continuous_state->meas_jnt_vel, sizeof(continuous_state->meas_jnt_vel));
+	memcpy(continuous_state->estimated_jnt_vel, continuous_state->jnt_vel_avg, sizeof(continuous_state->jnt_vel_avg));
 	pthread_mutex_unlock(&coord_state->estimate_lock);
 }
 
