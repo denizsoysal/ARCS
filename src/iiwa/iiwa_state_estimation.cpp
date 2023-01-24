@@ -177,13 +177,14 @@ void iiwa_state_estimation_capability_configuration_configure(activity_t *activi
 //This state of the lcsm is probably useless with the current implementation of this activity
 void iiwa_state_estimation_capability_configuration_compute(activity_t *activity){
 	iiwa_state_estimation_params_t* params = (iiwa_state_estimation_params_t *) activity->conf.params;
+	iiwa_state_estimation_continuous_state_t *cts_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
 
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
 	}
 	activity->state.lcsm_flags.capability_configuration_complete = true;
 
-	params->low_pass_a = 1/6;
+	cts_state->low_pass_a = 1.0/6.0;
 }
 
 void iiwa_state_estimation_capability_configuration(activity_t *activity){
@@ -309,7 +310,7 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 		// continuous_state->jnt_vel_avg[i] = sum/5.0;
 
 		//Low pass filter approach
-		continuous_state->jnt_vel_avg[i] = (1-params->low_pass_a)*continuous_state->prev_jnt_vel[i] + params->low_pass_a*continuous_state->meas_jnt_vel[i];
+		continuous_state->jnt_vel_avg[i] = (1-continuous_state->low_pass_a)*continuous_state->prev_jnt_vel[i] + continuous_state->low_pass_a*continuous_state->meas_jnt_vel[i];
 
 		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
@@ -322,10 +323,8 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	velksolver_estimate.JntToCart(continuous_state->local_qd, continuous_state->local_cart_vel);
 	fksolver_estimate.JntToCart(continuous_state->local_q, continuous_state->local_cart_pos);
 
-	std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
-	std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
-    //In which frame are they expressed ? Robot base frame?
-    // Set the cart_vel to a variable that can be used in other activities : Is the cart_vel expressed in end_effector frame or base?
+	// std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
+	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
 }
 
 void iiwa_state_estimation_running_communicate_write(activity_t *activity){
