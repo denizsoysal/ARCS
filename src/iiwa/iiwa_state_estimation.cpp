@@ -178,6 +178,7 @@ void iiwa_state_estimation_capability_configuration_configure(activity_t *activi
 void iiwa_state_estimation_capability_configuration_compute(activity_t *activity){
 	iiwa_state_estimation_params_t* params = (iiwa_state_estimation_params_t *) activity->conf.params;
 	iiwa_state_estimation_continuous_state_t *cts_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
+	iiwa_state_estimation_discrete_state_t *discrete_state = (iiwa_state_estimation_discrete_state_t *) activity->state.computational_state.discrete;
 
 	if (activity->state.lcsm_protocol == DEINITIALISATION){
 		activity->state.lcsm_flags.capability_configuration_complete = true;
@@ -185,6 +186,8 @@ void iiwa_state_estimation_capability_configuration_compute(activity_t *activity
 	activity->state.lcsm_flags.capability_configuration_complete = true;
 
 	cts_state->low_pass_a = 1.0/6.0;
+	discrete_state->in_contact = false;
+	discrete_state->moving = false;
 }
 
 void iiwa_state_estimation_capability_configuration(activity_t *activity){
@@ -277,8 +280,9 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	iiwa_state_estimation_params_t* params = (iiwa_state_estimation_params_t *) activity->conf.params;
 	iiwa_state_estimation_continuous_state_t *continuous_state = (iiwa_state_estimation_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_state_estimation_coordination_state_t *coord_state = (iiwa_state_estimation_coordination_state_t *) activity->state.coordination_state;
-
-    // get the current timestamp and compute the current cycle time. 
+	iiwa_state_estimation_discrete_state_t *discrete_state = (iiwa_state_estimation_discrete_state_t *) activity->state.computational_state.discrete;
+    
+	// get the current timestamp and compute the current cycle time. 
 	if (coord_state->first_run_compute_cycle){
 		coord_state->first_run_compute_cycle = false;
 		timespec_get(&continuous_state->current_timespec, TIME_UTC);
@@ -325,6 +329,19 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 
 	// std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
 	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
+
+	// Check whether the end effector is contacting something
+	bool one_joint_contact; //at least one joint measures an external force
+	one_joint_contact = false;
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		if(continuous_state->local_meas_ext_torques[i] > 1){
+			one_joint_contact = true;
+		}
+	}
+	discrete_state->in_contact = one_joint_contact;
+	if(discrete_state->in_contact){
+		printf("Contact detected");
+	}
 }
 
 void iiwa_state_estimation_running_communicate_write(activity_t *activity){

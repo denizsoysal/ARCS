@@ -85,6 +85,8 @@ typedef struct iiwa_state_estimation_continuous_state_s{
 
 //! (computational) discrete state
 typedef struct iiwa_state_estimation_discrete_state_s{
+    bool in_contact;
+    bool moving;
 }iiwa_state_estimation_discrete_state_t;
 
 //! Coordination state
