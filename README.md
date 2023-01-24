@@ -47,7 +47,7 @@ TODO
 
 # Control 
 
-## Implementation Details (TODO)
+## Implementation Details
 
 Key attributes to explain "why?":
 1. Force Based Cartesian Velocity Control
@@ -56,9 +56,18 @@ Key attributes to explain "why?":
 2. ABAG control law on determining the force to apply at the end effector
   - why not use PID
   - why use 2 ABAG controllers (1 for position, 1 for orientation) instead of 6 (1 for each DoF)
-3. Estimation of the velocity of the end effector
+
+### Velocity Estimation (Filtering)
   - why do we need filtering?
   - what type of filter do we choose and why?
+
+<img src="docs/figs/jnt_vel_signal.svg">
+
+Some comments about this graph here...
+
+<img src="docs/figs/vel_signal_hist.svg">
+
+Some comments about this other graph...**DO NOT USE A KALMAN FILTER FOR VELOCITY ESTIMATION**
 
 ## Future Implementation (TODO)
 - orientation control with another ABAG
