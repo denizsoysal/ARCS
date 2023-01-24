@@ -18,15 +18,19 @@ void navigation_config(activity_t *activity){
     switch(activity->lcsm.state){
         case CREATION:
             add_schedule_to_eventloop(&activity->schedule_table, "creation");
+            spdlog::debug("In creation state navigation");
             break;
         case RESOURCE_CONFIGURATION:
             add_schedule_to_eventloop(&activity->schedule_table, "resource_configuration");
+            spdlog::debug("In resource configuration state navigation");
             break;
         case RUNNING:
             add_schedule_to_eventloop(&activity->schedule_table, "running");
+            spdlog::debug("In running state navigation");
             break;
         case CLEANING:
             add_schedule_to_eventloop(&activity->schedule_table, "cleaning");
+            spdlog::debug("In cleaning state navigation");
             break;
         case DONE:
             break;
@@ -107,7 +111,9 @@ void navigation_running_communicate(activity_t *activity){
     pthread_mutex_lock(coord_state->estimation_lock);
     // pthread_mutex_lock(coord_state->setpoint_lock);
     pthread_mutex_lock(&coord_state->navigation_lock);
-    cts_state->heading = *cts_state->set_pos - (*cts_state->end_effector_pos).p;
+    // cts_state->heading = *cts_state->set_pos - (*cts_state->end_effector_pos).p;
+    // TODO Manually set the heading
+    cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
     pthread_mutex_unlock(coord_state->estimation_lock);
     // pthread_mutex_unlock(coord_state->setpoint_lock);
 
@@ -121,11 +127,14 @@ void navigation_running_communicate(activity_t *activity){
         cts_state->velocity_magnitude = 0;
     }
     
-    // Manually set the heading for now
-    cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
+    // TODO Manually set the velocity magnitude 
     cts_state->velocity_magnitude = 0.05;
 
     pthread_mutex_unlock(&coord_state->navigation_lock);
+
+    params->logger->info("headingx,{}", cts_state->heading[0]);
+    params->logger->info("headingy,{}", cts_state->heading[1]);
+    params->logger->info("headingz,{}", cts_state->heading[2]);
 }
 
 void navigation_running_coordinate(activity_t *activity){
