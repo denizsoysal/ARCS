@@ -188,7 +188,7 @@ int main(int argc, char**argv){
 	// ### LOGGING ## //
 	spdlog::debug("start of logging");
 	auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
-	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e, %n, %l, %v");
+	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e,%n,%l,%v");
 
     auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
     auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);

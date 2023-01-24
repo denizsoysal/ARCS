@@ -362,12 +362,14 @@ void iiwa_controller_running_compute(activity_t *activity){
 			}
 
             // LOGGING
-			params->logger->info("wrench_z, {}", cts_state->local_cmd_wrench[2]);
+			params->logger->info("wrench_x,{}", cts_state->local_cmd_wrench[0]);
+			params->logger->info("wrench_y,{}", cts_state->local_cmd_wrench[1]);
+			params->logger->info("wrench_z,{}", cts_state->local_cmd_wrench[2]);
 
-			// params->logger->info("ek_bar, {}", cts_state->abag_state.ek_bar);
-			// params->logger->info("bias, {}", cts_state->abag_state.bias);
-			// params->logger->info("gain, {}", cts_state->abag_state.gain);
-			// params->logger->info("control, {}", cts_state->abag_state.control);
+			params->logger->info("ek_bar,{}", cts_state->abag_state.ek_bar);
+			params->logger->info("bias,{}", cts_state->abag_state.bias);
+			params->logger->info("gain,{}", cts_state->abag_state.gain);
+			params->logger->info("control,{}", cts_state->abag_state.control);
 
 			break;
 		}

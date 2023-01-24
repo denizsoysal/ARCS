@@ -321,6 +321,31 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
     //In which frame are they expressed ? Robot base frame?
     // Set the cart_vel to a variable that can be used in other activities : Is the cart_vel expressed in end_effector frame or base?
+
+	// Logging
+	params->logger->info("local_meas_jnt_pos0,{}", continuous_state->local_meas_jnt_pos[0]);
+	params->logger->info("local_meas_jnt_pos1,{}", continuous_state->local_meas_jnt_pos[1]);
+	params->logger->info("local_meas_jnt_pos2,{}", continuous_state->local_meas_jnt_pos[2]);
+	params->logger->info("local_meas_jnt_pos3,{}", continuous_state->local_meas_jnt_pos[3]);
+	params->logger->info("local_meas_jnt_pos4,{}", continuous_state->local_meas_jnt_pos[4]);
+	params->logger->info("local_meas_jnt_pos5,{}", continuous_state->local_meas_jnt_pos[5]);
+	params->logger->info("local_meas_jnt_pos6,{}", continuous_state->local_meas_jnt_pos[6]);
+
+	params->logger->info("meas_jnt_vel0,{}", continuous_state->meas_jnt_vel[0]);
+	params->logger->info("meas_jnt_vel1,{}", continuous_state->meas_jnt_vel[1]);
+	params->logger->info("meas_jnt_vel2,{}", continuous_state->meas_jnt_vel[2]);
+	params->logger->info("meas_jnt_vel3,{}", continuous_state->meas_jnt_vel[3]);
+	params->logger->info("meas_jnt_vel4,{}", continuous_state->meas_jnt_vel[4]);
+	params->logger->info("meas_jnt_vel5,{}", continuous_state->meas_jnt_vel[5]);
+	params->logger->info("meas_jnt_vel6,{}", continuous_state->meas_jnt_vel[6]);
+
+	params->logger->info("jnt_vel_avg0,{}", continuous_state->jnt_vel_avg[0]);
+	params->logger->info("jnt_vel_avg1,{}", continuous_state->jnt_vel_avg[1]);
+	params->logger->info("jnt_vel_avg2,{}", continuous_state->jnt_vel_avg[2]);
+	params->logger->info("jnt_vel_avg3,{}", continuous_state->jnt_vel_avg[3]);
+	params->logger->info("jnt_vel_avg4,{}", continuous_state->jnt_vel_avg[4]);
+	params->logger->info("jnt_vel_avg5,{}", continuous_state->jnt_vel_avg[5]);
+	params->logger->info("jnt_vel_avg6,{}", continuous_state->jnt_vel_avg[6]);
 }
 
 void iiwa_state_estimation_running_communicate_write(activity_t *activity){
