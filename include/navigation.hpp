@@ -39,8 +39,7 @@ typedef struct navigation_params_s{
     double fast_vel;
     double slow_vel;
 
-    // logger implemented by spdlog
-    // std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> logger;
 }navigation_params_t;
 
 typedef struct navigation_continuous_state_s{

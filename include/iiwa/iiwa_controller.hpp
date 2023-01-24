@@ -70,7 +70,7 @@ typedef struct iiwa_controller_params_s{
     abag_params_t abag_params;
 
     // logger implemented by spdlog
-    // std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> logger;
 }iiwa_controller_params_t;
 
 // Continuous state which is the state of the controller system, including input and output signals

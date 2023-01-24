@@ -186,18 +186,17 @@ int main(int argc, char**argv){
 	//iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
-	// spdlog::info("start of logging");
-	// auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
-	// shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e, %n, %l, %v");
+	spdlog::debug("start of logging");
+	auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
+	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e, %n, %l, %v");
 
-	// auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
-    // iiwa_controller_params->logger = controller_logger;
+    auto controller_logger = std::make_shared<spdlog::logger>("iiwa_controller", shared_file_sink);
+    auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);
+	spdlog::register_logger(controller_logger);
+	spdlog::register_logger(navigation_logger);
 
-	// auto estimation_logger = std::make_shared<spdlog::logger>("iiwa_state_estimation", shared_file_sink);
-    // iiwa_estimation_params->logger = estimation_logger;
-
-	// auto navigation_logger = std::make_shared<spdlog::logger>("navigation", shared_file_sink);
-    // navigation_params->logger = navigation_logger;
+    iiwa_controller_params->logger = spdlog::get("iiwa_controller");
+	navigation_params->logger = spdlog::get("navigation");
 
 	// ### THREADS ### //
 	thread_t thread_iiwa;
@@ -226,7 +225,6 @@ int main(int argc, char**argv){
 	// Initialize the Mutex
 	pthread_mutex_init(&iiwa_activity_coord_state->sensor_lock, NULL);
 	pthread_mutex_init(&iiwa_activity_coord_state->actuation_lock, NULL);
-	pthread_mutex_init(&iiwa_controller_coord_state->goal_lock, NULL);
 	pthread_mutex_init(&iiwa_estimation_coord_state->estimate_lock, NULL);
 	pthread_mutex_init(&navigation_coord_state->navigation_lock, NULL);
 

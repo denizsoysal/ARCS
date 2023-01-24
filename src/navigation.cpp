@@ -84,10 +84,13 @@ void navigation_resource_configuration_configure(activity_t *activity){
 }
 
 void navigation_resource_configuration(activity_t *activity){
+    navigation_params_t *params = (navigation_params_t *) activity->conf.params;
+
     navigation_resource_configuration_compute(activity);
     activity->state.lcsm_flags.capability_configuration_complete = true;
     navigation_resource_configuration_coordinate(activity);
     navigation_resource_configuration_configure(activity);
+    params->logger->debug("Navigation resource configuration");
 }
 
 void navigation_running_communicate(activity_t *activity){
@@ -158,7 +161,9 @@ void navigation_running(activity_t *activity){
 void navigation_cleaning_compute(activity_t *activity){
     navigation_params_t *params = (navigation_params_t *) activity->conf.params;
     // flush the logger to ensure all data is written
-    // params->logger->flush();
+    if(params->logger){
+        params->logger->flush();
+    }
 }
 
 void navigation_cleaning(activity_t *activity){
@@ -210,6 +215,7 @@ void navigation_create_lcsm(activity_t* activity, const char* name_activity){
 
 void navigation_resource_configure_lcsm(activity_t *activity){
 	navigation_coordination_state_t *coord_state = (navigation_coordination_state_t *) activity->state.coordination_state;
+    navigation_params_t *params = (navigation_params_t *) activity->conf.params;
 
     resource_configure_lcsm_activity(activity);
     // Select the inital state of LCSM for this activity
@@ -217,6 +223,9 @@ void navigation_resource_configure_lcsm(activity_t *activity){
     activity->state.lcsm_protocol = INITIALISATION;
 	coord_state->deinitialisation_request = false;
 	coord_state->execution_request = false;
+
+    // initialize the logger to the null pointer
+    params->logger = NULL;
 
     // Schedule table (adding config() for the first eventloop iteration)
     navigation_register_schedules(activity);

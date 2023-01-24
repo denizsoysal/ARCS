@@ -125,7 +125,9 @@ void iiwa_state_estimation_cleaning_configure(activity_t *activity){
 void iiwa_state_estimation_cleaning_compute(activity_t *activity){
 	iiwa_state_estimation_params_t *params = (iiwa_state_estimation_params_t*) activity->conf.params;
 	// flush the logger to ensure all data is written
-	// params->logger->flush();
+	if(params->logger){
+		params->logger->flush();
+	}
     activity->state.lcsm_flags.deletion_complete = true;
 }
 
@@ -385,6 +387,7 @@ void iiwa_state_estimation_create_lcsm(activity_t* activity, const char* name_ac
 
 void iiwa_state_estimation_resource_configure_lcsm(activity_t *activity){
 	iiwa_state_estimation_coordination_state_t *coord_state = (iiwa_state_estimation_coordination_state_t *) activity->state.coordination_state;
+	iiwa_state_estimation_params_t *params = (iiwa_state_estimation_params_t *) activity->conf.params;
 
     resource_configure_lcsm_activity(activity);
     // Select the inital state of LCSM for this activity
@@ -392,6 +395,9 @@ void iiwa_state_estimation_resource_configure_lcsm(activity_t *activity){
     activity->state.lcsm_protocol = INITIALISATION;
 	coord_state->deinitialisation_request = false;
 	coord_state->execution_request = false;
+
+	// set initial logger pointer to NULL unless updated
+	params->logger = NULL;
 
     // Schedule table (adding config() for the first eventloop iteration)
     iiwa_state_estimation_register_schedules(activity);
