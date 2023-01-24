@@ -266,7 +266,7 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 
     // Read the goal from the navigation activity
 	pthread_mutex_lock(coord_state->navigation_lock);
-	memcpy(&state->local_heading, state->heading, sizeof(state->heading));
+	memcpy(&state->local_heading, state->heading, sizeof(state->local_heading));
     state->local_velocity_magnitude = *state->velocity_magnitude;
 	pthread_mutex_unlock(coord_state->navigation_lock);
 }
