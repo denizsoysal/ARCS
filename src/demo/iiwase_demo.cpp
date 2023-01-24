@@ -183,6 +183,7 @@ int main(int argc, char**argv){
 	iiwa_controller_params->cmd_mode = WRENCH; // TODO link with iiwa? Should it be param or state?
 	iiwa_activity_coord_state->execution_request = true;
 	iiwa_estimation_coord_state->execution_request = true;
+	navigation_coord_state->execution_request = true;
 	//iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
