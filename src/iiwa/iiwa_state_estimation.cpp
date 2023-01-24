@@ -125,7 +125,7 @@ void iiwa_state_estimation_cleaning_configure(activity_t *activity){
 void iiwa_state_estimation_cleaning_compute(activity_t *activity){
 	iiwa_state_estimation_params_t *params = (iiwa_state_estimation_params_t*) activity->conf.params;
 	// flush the logger to ensure all data is written
-	params->logger->flush();
+	// params->logger->flush();
     activity->state.lcsm_flags.deletion_complete = true;
 }
 
@@ -171,7 +171,7 @@ void iiwa_state_estimation_capability_configuration_configure(activity_t *activi
 		activity->state.lcsm_flags.capability_configuration_complete = false;
 	}
 
-	params->logger->info("Capability configuration");
+	// params->logger->info("Capability configuration");
 }
 
 //This state of the lcsm is probably useless with the current implementation of this activity

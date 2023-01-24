@@ -40,7 +40,7 @@ typedef struct navigation_params_s{
     double slow_vel;
 
     // logger implemented by spdlog
-    std::shared_ptr<spdlog::logger> logger;
+    // std::shared_ptr<spdlog::logger> logger;
 }navigation_params_t;
 
 typedef struct navigation_continuous_state_s{
@@ -63,7 +63,7 @@ typedef struct navigation_coordination_state_s {
     bool deinitialisation_request;
 
     // Mutex for navigation
-    pthread_mutex_t navigation_lock, *setpoint_lock, *estimation_lock;
+    pthread_mutex_t navigation_lock, *perception_lock, *estimation_lock;
 
 } navigation_coordination_state_t;
 

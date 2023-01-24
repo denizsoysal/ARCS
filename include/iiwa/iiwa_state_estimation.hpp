@@ -39,7 +39,7 @@ typedef struct iiwa_state_estimation_s{
 
 typedef struct iiwa_state_estimation_params_s{
     // logger implemented by spdlog
-    std::shared_ptr<spdlog::logger> logger;
+    // std::shared_ptr<spdlog::logger> logger;
 }iiwa_state_estimation_params_t;
 
 // Continuous state which is the state of the state_estimation system, including input and output signals

@@ -127,7 +127,7 @@ void iiwa_controller_cleaning_configure(activity_t *activity){
 void iiwa_controller_cleaning_compute(activity_t *activity){
 	iiwa_controller_params_t *params = (iiwa_controller_params_t*) activity->conf.params;
 	// flush the logger to ensure all data is written
-	params->logger->flush();
+	// params->logger->flush();
     activity->state.lcsm_flags.deletion_complete = true;
 }
 
@@ -262,20 +262,7 @@ void iiwa_controller_running_communicate_read(activity_t *activity){
 	memcpy(state->local_jnt_vel, state->jnt_vel, sizeof(state->local_jnt_vel));
 	pthread_mutex_unlock(coord_state->estimate_lock);
 
-    // read goals from other, depending on control mode
-    pthread_mutex_lock(&coord_state->goal_lock);
-	memcpy(params->local_goal_jnt_pos, params->goal_jnt_pos, sizeof(params->goal_jnt_pos));
-	switch(params->cmd_mode){
-		case(POSITION): break;
-		case(WRENCH):
-		{
-			memcpy(params->local_goal_wrench, params->goal_wrench, sizeof(params->goal_wrench));
-			break;
-		}
-		case(TORQUE): break;
-	}
-    pthread_mutex_unlock(&coord_state->goal_lock);
-
+    // Read the goal from the navigation activity
 	pthread_mutex_lock(coord_state->navigation_lock);
 	memcpy(&state->local_heading, state->heading, sizeof(state->heading));
     state->local_velocity_magnitude = *state->velocity_magnitude;
@@ -373,12 +360,12 @@ void iiwa_controller_running_compute(activity_t *activity){
 			}
 
             // LOGGING
-			params->logger->info("wrench_z, {}", cts_state->local_cmd_wrench[2]);
+			// params->logger->info("wrench_z, {}", cts_state->local_cmd_wrench[2]);
 
-			params->logger->info("ek_bar, {}", cts_state->abag_state.ek_bar);
-			params->logger->info("bias, {}", cts_state->abag_state.bias);
-			params->logger->info("gain, {}", cts_state->abag_state.gain);
-			params->logger->info("control, {}", cts_state->abag_state.control);
+			// params->logger->info("ek_bar, {}", cts_state->abag_state.ek_bar);
+			// params->logger->info("bias, {}", cts_state->abag_state.bias);
+			// params->logger->info("gain, {}", cts_state->abag_state.gain);
+			// params->logger->info("control, {}", cts_state->abag_state.control);
 
 			break;
 		}

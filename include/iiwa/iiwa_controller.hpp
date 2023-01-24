@@ -63,25 +63,6 @@ typedef struct abag_state_s{
 // Parameters that configure the behaviour of the controller, like gains, motion spec, etc
 typedef struct iiwa_controller_params_s{
     EClientCommandMode cmd_mode;
-    
-    double	goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    double	goal_wrench[CART_VECTOR_DIM];
-
-    double  local_goal_jnt_pos[LBRState::NUMBER_OF_JOINTS];
-    double  local_goal_wrench[CART_VECTOR_DIM];
-
-    // parameters which affect the motion specification
-    // double  max_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    // double  slow_jnt_vel[LBRState::NUMBER_OF_JOINTS];
-    // double  jnt_accel[LBRState::NUMBER_OF_JOINTS];
-    // double  jnt_jerk[LBRState::NUMBER_OF_JOINTS];
-    // double  max_jnt_accel[LBRState::NUMBER_OF_JOINTS];
-    // double  approach_buffer[LBRState::NUMBER_OF_JOINTS];
-    // double  slow_buffer[LBRState::NUMBER_OF_JOINTS];
-    // double  goal_buffer[LBRState::NUMBER_OF_JOINTS];
-
-    double max_wrench_step;
-
     // parameter for bounding the capability of the controller
     double max_torque;
     double max_force;
@@ -89,7 +70,7 @@ typedef struct iiwa_controller_params_s{
     abag_params_t abag_params;
 
     // logger implemented by spdlog
-    std::shared_ptr<spdlog::logger> logger;
+    // std::shared_ptr<spdlog::logger> logger;
 }iiwa_controller_params_t;
 
 // Continuous state which is the state of the controller system, including input and output signals
@@ -136,7 +117,7 @@ typedef struct iiwa_controller_coordination_state_s {
     bool commanding_not_active;
 
     // Mutex
-    pthread_mutex_t *estimate_lock, *actuation_lock, *navigation_lock, goal_lock;
+    pthread_mutex_t *estimate_lock, *actuation_lock, *navigation_lock;
 
     // First run compute cycle
     bool first_run_compute_cycle; //still need to check whether it is required

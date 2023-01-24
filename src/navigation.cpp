@@ -158,7 +158,7 @@ void navigation_running(activity_t *activity){
 void navigation_cleaning_compute(activity_t *activity){
     navigation_params_t *params = (navigation_params_t *) activity->conf.params;
     // flush the logger to ensure all data is written
-    params->logger->flush();
+    // params->logger->flush();
 }
 
 void navigation_cleaning(activity_t *activity){
