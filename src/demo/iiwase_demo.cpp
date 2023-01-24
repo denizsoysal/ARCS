@@ -187,6 +187,7 @@ int main(int argc, char**argv){
 	//iiwa_controller_coord_state->execution_request = true;
 
 	// ### LOGGING ## //
+	spdlog::set_level(spdlog::level::debug);
 	spdlog::debug("start of logging");
 	auto shared_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/iiwase_log.csv");
 	shared_file_sink->set_pattern("%Y-%m-%d %H:%M:%S.%e,%n,%l,%v");
