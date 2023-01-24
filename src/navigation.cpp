@@ -58,8 +58,10 @@ void navigation_resource_configuration_coordinate(activity_t *activity){
  
     if (coord_state->deinitialisation_request)
 		activity->state.lcsm_protocol = DEINITIALISATION;
+    if (coord_state->execution_request)
+        activity->state.lcsm_protocol = EXECUTION;
 
-	if (activity->state.lcsm_flags.capability_configuration_complete){
+	if (activity->state.lcsm_flags.resource_configuration_complete){
 		switch (activity->state.lcsm_protocol){ 
 			case EXECUTION:
 				activity->lcsm.state = RUNNING;
@@ -87,7 +89,7 @@ void navigation_resource_configuration(activity_t *activity){
     navigation_params_t *params = (navigation_params_t *) activity->conf.params;
 
     navigation_resource_configuration_compute(activity);
-    activity->state.lcsm_flags.capability_configuration_complete = true;
+    activity->state.lcsm_flags.resource_configuration_complete = true;
     navigation_resource_configuration_coordinate(activity);
     navigation_resource_configuration_configure(activity);
     params->logger->debug("Navigation resource configuration");
