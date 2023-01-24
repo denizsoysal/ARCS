@@ -308,6 +308,7 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 
 		// write the joint positions and velocities to the JntArray
 		continuous_state->local_qd.q(i) = continuous_state->local_meas_jnt_pos[i];
+		continuous_state->local_q(i) = continuous_state->local_meas_jnt_pos[i];
 		// continuous_state->local_qd.qdot(i) = continuous_state->meas_jnt_vel[i];
 		continuous_state->local_qd.qdot(i) = continuous_state->jnt_vel_avg[i];
 	}
