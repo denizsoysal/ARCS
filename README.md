@@ -157,3 +157,7 @@ Some comments about this other graph...**DO NOT USE A KALMAN FILTER FOR VELOCITY
 ## Future Implementation (TODO)
 - orientation control with another ABAG
 - orientation of the entire robot arm to avoid singularities and position better to sense forces
+
+## iiwa_activity changes
+1. Allow us to set the position of the virtual spring directly in stiffness control mode, rather than sending the velocity. 
+2. Give us a timestamp of the encoder measurements from the iiwa, so that the time corresponds to when the actual measurement is made. This will allow us to accurately measure velocity. 
