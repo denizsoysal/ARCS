@@ -330,17 +330,29 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	// std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
 	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
 
-	// Check whether the end effector is contacting something
-	bool one_joint_contact; //at least one joint measures an external force
-	one_joint_contact = false;
+	// // Check whether the end effector is contacting something
+	// bool one_joint_contact; //at least one joint measures an external force
+	// one_joint_contact = false;
+	// for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+	// 	if(continuous_state->local_meas_ext_torques[i] > 1){
+	// 		one_joint_contact = true;
+	// 	}
+	// }
+	// discrete_state->in_contact = one_joint_contact;
+	// if(discrete_state->in_contact){
+	// 	printf("Contact detected");
+	// }
+	// Check whether the end effector is moving
+	bool one_joint_moving; //at least one is moving
+	one_joint_moving= false;
 	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-		if(continuous_state->local_meas_ext_torques[i] > 1){
-			one_joint_contact = true;
+		if(fabs(continuous_state->jnt_vel_avg[i]) > 0.1){
+			one_joint_moving = true;
 		}
 	}
-	discrete_state->in_contact = one_joint_contact;
-	if(discrete_state->in_contact){
-		printf("Contact detected");
+	discrete_state->moving = one_joint_moving;
+	if(discrete_state->moving){
+		printf("Robot is moving");
 	}
 }
 
