@@ -77,6 +77,8 @@ typedef struct iiwa_state_estimation_continuous_state_s{
     double jnt_vel_buffer[5][LBRState::NUMBER_OF_JOINTS]; //5 is the size of the averaging window, it might be modified
     int avg_buffer_ind;
     double jnt_vel_avg[LBRState::NUMBER_OF_JOINTS];
+    double prev_jnt_vel[LBRState::NUMBER_OF_JOINTS];
+    double low_pass_a;
 }iiwa_state_estimation_continuous_state_t;
 
 //! (computational) discrete state
