@@ -107,7 +107,7 @@ void navigation_running_communicate(activity_t *activity){
         (navigation_coordination_state_t *) activity->state.coordination_state;
     navigation_params_t *params = (navigation_params_t *) activity->conf.params;
     double heading_norm;
-    KDL::Vector hardcode_pos(0, 0, 0);
+    KDL::Vector hardcode_pos(-0.5, -0.4, 0.15);
     
     pthread_mutex_lock(coord_state->estimation_lock);
     // pthread_mutex_lock(coord_state->setpoint_lock);
@@ -133,7 +133,7 @@ void navigation_running_communicate(activity_t *activity){
     }
     
     // TODO Manually set the velocity magnitude 
-    cts_state->velocity_magnitude = 0.05;
+    // cts_state->velocity_magnitude = 0.05;
 
     pthread_mutex_unlock(&coord_state->navigation_lock);
 
