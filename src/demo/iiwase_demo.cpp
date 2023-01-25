@@ -125,13 +125,14 @@ int main(int argc, char**argv){
 	iiwa_controller_params_t* iiwa_controller_params = (iiwa_controller_params_t *) iiwa_controller.conf.params;
 	iiwa_controller_continuous_state_t *iiwa_controller_continuous_state = (iiwa_controller_continuous_state_t *) iiwa_controller.state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *iiwa_controller_coord_state = (iiwa_controller_coordination_state_t *) iiwa_controller.state.coordination_state;
-
+	iiwa_controller_discrete_state_t *iiwa_controller_discrete_state = (iiwa_controller_discrete_state_t *) iiwa_controller.state.computational_state.discrete;
 	deinit_controller= &iiwa_controller_coord_state->deinitialisation_request;
 
 	// Initialize Vars: iiwa_state_estimation
 	iiwa_state_estimation_params_t* iiwa_estimation_params = (iiwa_state_estimation_params_t *) estimation_activity.conf.params;
 	iiwa_state_estimation_continuous_state_t *iiwa_estimation_continuous_state = (iiwa_state_estimation_continuous_state_t *) estimation_activity.state.computational_state.continuous;
 	iiwa_state_estimation_coordination_state_t *iiwa_estimation_coord_state = (iiwa_state_estimation_coordination_state_t *) estimation_activity.state.coordination_state;
+	iiwa_state_estimation_discrete_state_t *iiwa_estimation_discrete_state = (iiwa_state_estimation_discrete_state_t *) estimation_activity.state.computational_state.discrete;
 
 	deinit_estimation= &iiwa_estimation_coord_state->deinitialisation_request;
 
@@ -155,6 +156,7 @@ int main(int argc, char**argv){
 	iiwa_controller_continuous_state->cart_pos = &iiwa_estimation_continuous_state->cart_pos;
 	iiwa_controller_continuous_state->cart_vel = &iiwa_estimation_continuous_state->cart_vel;
 	iiwa_controller_continuous_state->jnt_vel = &iiwa_estimation_continuous_state->estimated_jnt_vel;
+	iiwa_controller_discrete_state->arm_moving = &iiwa_estimation_discrete_state->arm_moving;
 
 	// Share actuators between controller and iiwa
 	iiwa_controller_continuous_state->cmd_jnt_vel = iiwa_activity_params->iiwa_params.cmd_jnt_vel;

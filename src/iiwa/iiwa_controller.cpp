@@ -319,6 +319,7 @@ void iiwa_controller_running_compute(activity_t *activity){
 	iiwa_controller_params_t* params = (iiwa_controller_params_t *) activity->conf.params;
 	iiwa_controller_continuous_state_t *cts_state = (iiwa_controller_continuous_state_t *) activity->state.computational_state.continuous;
 	iiwa_controller_coordination_state_t *coord_state = (iiwa_controller_coordination_state_t *) activity->state.coordination_state;
+	iiwa_controller_discrete_state_t *discrete_state = (iiwa_controller_discrete_state_t *) activity->state.computational_state.discrete;
 
 	double cmd_vel;
 	double prev_cmd_vel = cts_state->local_cmd_jnt_vel[6];
@@ -345,7 +346,8 @@ void iiwa_controller_running_compute(activity_t *activity){
 			// Project the cartesian velocity of the end effector onto the heading and pass Norm to ABAG as current state
             projected_vel = KDL::dot(local_vel.vel, cts_state->local_heading) * cts_state->local_heading 
 				            / pow(cts_state->local_heading.Norm(), 2);           
-			abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm());
+			abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm(), discrete_state->arm_moving);
+			//abag(&params->abag_params, &cts_state->abag_state, cts_state->local_velocity_magnitude, projected_vel.Norm());
 
             // Now rotate the global cartesian force into the end effector frame
 			end_effector_heading = cts_state->local_cart_pos.M * cts_state->local_heading;
@@ -370,13 +372,13 @@ void iiwa_controller_running_compute(activity_t *activity){
 			params->logger->info("bias,{}", cts_state->abag_state.bias);
 			params->logger->info("gain,{}", cts_state->abag_state.gain);
 			params->logger->info("control,{}", cts_state->abag_state.control);
-
 			break;
 		}
 		case(TORQUE):
 		{
 			// local cmd torque = max_torque * control E [-1, 1]
-			abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6]);
+			abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6], discrete_state->arm_moving);
+			//abag(&params->abag_params, &cts_state->abag_state, 0.1, cts_state->local_jnt_vel[6]);
 
 			for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS - 1;i++)
 			{
@@ -469,19 +471,35 @@ const iiwa_controller_t ec_iiwa_controller ={
     .destroy_lcsm = iiwa_controller_destroy_lcsm,
 };
 
-void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val){
+void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val, bool *motion){
 	state->ek_bar = params->alpha * state->ek_bar + (1 - params->alpha) * sgn(setpoint - val);
 	state->bias = saturate(state->bias + 
 	    params->delta_bias * hside(fabs(state->ek_bar)-params->bias_thresh) * sgn(state->ek_bar-params->bias_thresh), 
 		params->sat_low, params->sat_high);
-	state->gain = saturate(state->gain + 
-	    params->delta_gain * sgn(fabs(state->ek_bar) - params->gain_thresh), 
-		params->sat_low, params->sat_high);
+	if (*motion){ //we update the arm only if it moves
+		state->gain = saturate(state->gain + 
+			params->delta_gain * sgn(fabs(state->ek_bar) - params->gain_thresh), 
+			params->sat_low, params->sat_high);
+	}
 	state->control = saturate(state->bias + state->gain * sgn(setpoint - val), 
 	    params->sat_low, params->sat_high);
 
 	return;
 }
+
+// void abag(abag_params_t *params, abag_state_t *state, double setpoint, double val){
+// 	state->ek_bar = params->alpha * state->ek_bar + (1 - params->alpha) * sgn(setpoint - val);
+// 	state->bias = saturate(state->bias + 
+// 	    params->delta_bias * hside(fabs(state->ek_bar)-params->bias_thresh) * sgn(state->ek_bar-params->bias_thresh), 
+// 		params->sat_low, params->sat_high);
+// 	state->gain = saturate(state->gain + 
+// 	    params->delta_gain * sgn(fabs(state->ek_bar) - params->gain_thresh), 
+// 		params->sat_low, params->sat_high);
+// 	state->control = saturate(state->bias + state->gain * sgn(setpoint - val), 
+// 	    params->sat_low, params->sat_high);
+
+// 	return;
+// }
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));

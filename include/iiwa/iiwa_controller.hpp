@@ -107,6 +107,7 @@ typedef struct iiwa_controller_continuous_state_s{
 typedef struct iiwa_controller_discrete_state_s{
     // flags
     bool in_contact;
+    bool *arm_moving;
 }iiwa_controller_discrete_state_t;
 
 //! Coordination state
@@ -143,6 +144,7 @@ template <typename T> T saturate(T val, T sat_low, T sat_high);
  * Note: the sign of the error has been reversed. Instead of val-setpoint, I use setpoint-val. 
  * This gives a positive control signal uk when the value is less than the setpoint.
 */
-void abag(abag_params_t *params, abag_state_t *state, double val, double setpoint);
+void abag(abag_params_t *params, abag_state_t *state, double val, double setpoint, bool *motion);
+// void abag(abag_params_t *params, abag_state_t *state, double val, double setpoint);
 
 #endif //iiwa_controller_HPP
