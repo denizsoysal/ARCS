@@ -45,7 +45,7 @@ typedef struct navigation_params_s{
 typedef struct navigation_continuous_state_s{
     // shared variables to be read from other activity
     KDL::Frame *end_effector_pos;
-    KDL::Vector *set_pos;
+    // KDL::Vector *set_pos;
 
     KDL::Vector heading;
     double velocity_magnitude;

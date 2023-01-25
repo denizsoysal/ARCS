@@ -107,13 +107,18 @@ void navigation_running_communicate(activity_t *activity){
         (navigation_coordination_state_t *) activity->state.coordination_state;
     navigation_params_t *params = (navigation_params_t *) activity->conf.params;
     double heading_norm;
+    KDL::Vector hardcode_pos(0, 0, 0);
     
     pthread_mutex_lock(coord_state->estimation_lock);
     // pthread_mutex_lock(coord_state->setpoint_lock);
     pthread_mutex_lock(&coord_state->navigation_lock);
     // cts_state->heading = *cts_state->set_pos - (*cts_state->end_effector_pos).p;
+
     // TODO Manually set the heading
-    cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
+    // cts_state->heading[0]=0; cts_state->heading[1]=0; cts_state->heading[2]=-1;
+
+    // TODO Manually set the pos
+    cts_state->heading = hardcode_pos - (*cts_state->end_effector_pos).p;
     pthread_mutex_unlock(coord_state->estimation_lock);
     // pthread_mutex_unlock(coord_state->setpoint_lock);
 

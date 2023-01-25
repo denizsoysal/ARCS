@@ -318,12 +318,14 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	velksolver_estimate.JntToCart(continuous_state->local_qd, continuous_state->local_cart_vel);
 	fksolver_estimate.JntToCart(continuous_state->local_q, continuous_state->local_cart_pos);
 
-	std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
-	std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
-    //In which frame are they expressed ? Robot base frame?
-    // Set the cart_vel to a variable that can be used in other activities : Is the cart_vel expressed in end_effector frame or base?
+	// std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
+	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
 
 	// Logging
+    params->logger->info("cart_x,{}", continuous_state->local_cart_pos.p[0]);
+    params->logger->info("cart_y,{}", continuous_state->local_cart_pos.p[1]);
+    params->logger->info("cart_z,{}", continuous_state->local_cart_pos.p[2]);
+
 	params->logger->info("local_meas_jnt_pos0,{}", continuous_state->local_meas_jnt_pos[0]);
 	params->logger->info("local_meas_jnt_pos1,{}", continuous_state->local_meas_jnt_pos[1]);
 	params->logger->info("local_meas_jnt_pos2,{}", continuous_state->local_meas_jnt_pos[2]);
