@@ -90,21 +90,21 @@ void abag(abag_params_t *params, abag_state_t *state, double setpoint, double va
 (Above) shows the implementation of the controller outlined in [1]. (Below) shows the values set for the 'hyperparameters' of the controller which determines how the bias and gain terms adapt. Both code blocks from from `iiwa_controller.cpp`.
 
 ```cpp
-		params->max_torque = 2.0;
-		params->max_force = 5.0;
+params->max_torque = 2.0;
+params->max_force = 5.0;
 
-		// Configure ABAG Controller
-		params->abag_params_cartesian.sat_high = 1;
-		params->abag_params_cartesian.sat_low = -1;
+// Configure ABAG Controller
+params->abag_params_cartesian.sat_high = 1;
+params->abag_params_cartesian.sat_low = -1;
 
-        // parameters from paper
-		// TODO we should set alpha to remove the moving avg filter here eventually
-		// TODO we should do all filtering in the estimation
-		params->abag_params_cartesian.alpha = 0.75;
-		params->abag_params_cartesian.bias_thresh = 0.75;
-		params->abag_params_cartesian.delta_bias = 0.001;
-		params->abag_params_cartesian.gain_thresh = 0.5;
-		params->abag_params_cartesian.delta_gain = 0.001;
+    // parameters from paper
+// TODO we should set alpha to remove the moving avg filter here eventually
+// TODO we should do all filtering in the estimation
+params->abag_params_cartesian.alpha = 0.75;
+params->abag_params_cartesian.bias_thresh = 0.75;
+params->abag_params_cartesian.delta_bias = 0.001;
+params->abag_params_cartesian.gain_thresh = 0.5;
+params->abag_params_cartesian.delta_gain = 0.001;
 ```
 
 - The 'error' term in the ABAG controller is the difference between the desired velocity and the actual velocity. Below is a code block were we call the abag controller implementation. As can be seen, the abag controller has a state, which is the current set of gains it is using. 
