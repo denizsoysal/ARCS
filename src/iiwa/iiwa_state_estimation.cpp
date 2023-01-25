@@ -320,7 +320,6 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 
 	// std::cout<< "Position in arm_base frame: " << continuous_state->local_cart_pos.p <<std::endl;
 	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
-	spdlog::debug("Position in Base Frame: {}", continuous_state->local_cart_pos.p);
 
 	// Logging
     params->logger->info("cart_x,{}", continuous_state->local_cart_pos.p[0]);
