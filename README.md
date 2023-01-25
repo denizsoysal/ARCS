@@ -127,18 +127,39 @@ For the following section, the following symbols apply:
 
 #### 1. Use a single ABAG controller and only control the velocity components along the heading vector $\overrightarrow{h}$ that you want to be travelling in. 
 
-$$\Delta v = \|\frac{\overrightarrow{v_{ee}}\cdot\overrightarrow{h}}{\|\overrightarrow{v_{ee}}\|^2}\overrightarrow{h}\| - v_{des}$$
-$$\overrightarrow{F} = F_{max} * u_{ABAG}(\Delta v) * \overrightarrow{h}$$
+```math
+\Delta v = \|\frac{\overrightarrow{v_{ee}}\cdot\overrightarrow{h}}{\|\overrightarrow{v_{ee}}\|^2}\overrightarrow{h}\| - v_{des}
+```
+
+```math
+\overrightarrow{F} = F_{max} * u_{ABAG}(\Delta v) * \overrightarrow{h}
+```
 
 #### 2. Use an ABAG controller for each component (xyz) of the velocity. 
 
-$$\Delta v_x = \overrightarrow{v_{ee}}[x] - v_{des}*\overrightarrow{h}[x]$$
-$$\Delta v_y = \overrightarrow{v_{ee}}[y] - v_{des}*\overrightarrow{h}[y]$$
-$$\Delta v_z = \overrightarrow{v_{ee}}[z] - v_{des}*\overrightarrow{h}[z]$$
+```math
+\Delta v_x = \overrightarrow{v_{ee}}[x] - v_{des}*\overrightarrow{h}[x]
+```
 
-$$\overrightarrow{F}[x] = F_{max} * u_{ABAG}(\Delta v_x) * \overrightarrow{h}[x]$$
-$$\overrightarrow{F}[y] = F_{max} * u_{ABAG}(\Delta v_y) * \overrightarrow{h}[y]$$
-$$\overrightarrow{F}[z] = F_{max} * u_{ABAG}(\Delta v_z) * \overrightarrow{h}[z]$$
+```math
+\Delta v_y = \overrightarrow{v_{ee}}[y] - v_{des}*\overrightarrow{h}[y]
+```
+
+```math
+\Delta v_z = \overrightarrow{v_{ee}}[z] - v_{des}*\overrightarrow{h}[z]
+```
+
+```math
+\overrightarrow{F}[x] = F_{max} * u_{ABAG}(\Delta v_x) * \overrightarrow{h}[x]
+```
+
+```math
+\overrightarrow{F}[y] = F_{max} * u_{ABAG}(\Delta v_y) * \overrightarrow{h}[y]
+```
+
+```math
+\overrightarrow{F}[z] = F_{max} * u_{ABAG}(\Delta v_z) * \overrightarrow{h}[z]
+```
 
 ### Velocity Estimation (Filtering)
 
