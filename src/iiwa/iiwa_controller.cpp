@@ -334,8 +334,9 @@ void iiwa_controller_running_compute(activity_t *activity){
 	double prev_cmd_vel = cts_state->local_cmd_jnt_vel[6];
 	KDL::Twist local_vel;
 	KDL::Vector projected_vel;
-	KDL::Vector end_effector_heading;
+	// KDL::Vector end_effector_heading;
 	KDL::Vector end_effector_force;
+	KDL::Vector base_frame_force;
 
 	switch(params->cmd_mode){
 		case(POSITION):
@@ -367,10 +368,10 @@ void iiwa_controller_running_compute(activity_t *activity){
 			abag(&params->abag_params_cartesian, &cts_state->abag_state_z, cts_state->local_velocity_magnitude * cts_state->local_heading[2], local_vel[2]);
 
             // Now rotate the global cartesian force into the end effector frame
-			end_effector_force[0] = params->max_force * cts_state->abag_state_x.control;
-			end_effector_force[1] = params->max_force * cts_state->abag_state_y.control;
-			end_effector_force[2] = params->max_force * cts_state->abag_state_z.control;
-			end_effector_heading = cts_state->local_cart_pos.M * end_effector_force;
+			base_frame_force[0] = params->max_force * cts_state->abag_state_x.control;
+			base_frame_force[1] = params->max_force * cts_state->abag_state_y.control;
+			base_frame_force[2] = params->max_force * cts_state->abag_state_z.control;
+			end_effector_force = cts_state->local_cart_pos.M * base_frame_force;
 
             // TODO remove once we have the orientation ABAG and the direction ABAG
      		for (unsigned int i=0;i<6;i++)
