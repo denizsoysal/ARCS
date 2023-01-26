@@ -162,17 +162,62 @@ The controller gets to the goal position, but then does not stop and suddenly de
 
 ### Velocity Estimation (Filtering)
 
+As explained earlier, we control the motion of the robot by applying a wrench at the end-effector computed from an error in velocity.
+To obtain the cartesian velocity, we first differentiate the joint position measured by the encoder to get the joint velocity and we then use forward kinematics to obtain the cartesian velocity. 
 
+As can be observed in the figure below, the joint velocity obtained after differentiation is very noisy. 
 
-  - what type of filter do we choose and why?
+We explain this observation from the fact that we use the time we use to differentiate the joint position is probably not synchronised with the time at which the measurements were actually recorded. To improve this, we should assign a timestamp with each encoder reading to use an accurate Delta T.
 
 <img src="docs/figs/jnt_vel_signal.svg">
 
-Some comments about this graph here...
+The signal in yellow is a post-processed averging of the real signal. 
+The green signal is the high-frequency component of the joint velocity (real signal - average signal). The distribution of its values is given hereafter:
 
 <img src="docs/figs/vel_signal_hist.svg">
 
-Some comments about this other graph...**DO NOT USE A KALMAN FILTER FOR VELOCITY ESTIMATION**
+This distribution is not gaussian and we therefore concluded that we should not use a Kalman Filter to approximate the joint velocity from the noisy signal.
+
+We investigated different filtering methods to cope with the noisy behavior of the estimated joint velocity.
+
+The first method is a simple moving average, the average joint velocity is computed as the mean of the n last estimated joint velocities. This requires to keep track of those in a buffer of size n.
+
+$$\dot{q}_{avg} = \sum_{i=1}^{n} \frac{\dot{q}_{est,i}}{n}$$
+
+The resulting velocity is shown in the next figure for the first 6 joints:
+
+<img src="docs/figs/velocity_averaging/jnt_vel_moving_avg.svg">
+
+It can be observed that the noise is significantly reduced. We did not tune the size of the averaging buffer.
+
+The most interesting observation is how it reduced the jittering effect on the control signals. 
+Hereafter is the control signals when the raw joint velocity estimation is directly used:
+
+<img src="docs/figs/velocity_averaging/control_no_avg.png">
+
+The signal ekbar corresponds to the difference between the measured velocity and the desired velocity. The control wrench is then proportional to this integrated error through the gain. Having a nosiy ek_bar gives a vibrating behavior to the robot (to be avoided of course).
+
+In comparison, the next figure shows the same signals when the ek_bar is computed with the moving average estimation. The noise is already reduced.
+
+<img src="docs/figs/velocity_averaging/control_moving_avg.png">
+
+The other solution we propose to smooth the joint velocity estimation is to use a first order low pass filter. The average velocity is computed as: 
+$$\dot{q}_{avg}[k] = (1-\alpha) \dot{q}_{avg}[k-1] + \alpha \dot{q}_{meas}[k]$$
+where $\alpha = \dfrac{h}{h+\tau_f}$ with $h$ being the cycle time and $\tau_f$, the time constant of the filter. 
+The next figures show the averaged joint velocities when using a high ($\tau_f = 2h$), middle ($\tau_f = 5h$) and low ($\tau_f = 10h$) cut-off frequency in the filter.
+
+<img src="docs/figs/velocity_averaging/jnt_vel_lp_high.svg">
+
+<img src="docs/figs/velocity_averaging/jnt_vel_lp_mid.svg">
+
+<img src="docs/figs/velocity_averaging/jnt_vel_lp_low.svg">
+
+The corresponding control signals are:
+<img src="docs/figs/velocity_averaging/control_lp_high.png">
+<img src="docs/figs/velocity_averaging/control_lp_mid.png">
+<img src="docs/figs/velocity_averaging/control_lp_low.png">
+
+The control command was the least noisy with the low pass filter with the lower cut-off frquency (neglect the oscillations around 14:15:30, the robot had a problem).
 
 ## Future Implementation (TODO)
 - tune the controller
