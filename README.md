@@ -130,33 +130,32 @@ For the following section, the following symbols apply:
 ```math
 \Delta v = \|\frac{\overrightarrow{v_{ee}}\cdot\overrightarrow{h}}{\|\overrightarrow{v_{ee}}\|^2}\overrightarrow{h}\| - v_{des}
 ```
-
 ```math
 \overrightarrow{F} = F_{max} * u_{ABAG}(\Delta v) * \overrightarrow{h}
 ```
+<img src=docs/figs/one_abag_controller.gif>
+
+The controller gets to the goal position, but then does not stop and suddenly deviates from the expected behaviour. 
+
+<img src=docs/figs/trajectory.svg>
 
 #### 2. Use an ABAG controller for each component (xyz) of the velocity. 
 
 ```math
 \Delta v_x = \overrightarrow{v_{ee}}[x] - v_{des}*\overrightarrow{h}[x]
 ```
-
 ```math
 \Delta v_y = \overrightarrow{v_{ee}}[y] - v_{des}*\overrightarrow{h}[y]
 ```
-
 ```math
 \Delta v_z = \overrightarrow{v_{ee}}[z] - v_{des}*\overrightarrow{h}[z]
 ```
-
 ```math
 \overrightarrow{F}[x] = F_{max} * u_{ABAG}(\Delta v_x) * \overrightarrow{h}[x]
 ```
-
 ```math
 \overrightarrow{F}[y] = F_{max} * u_{ABAG}(\Delta v_y) * \overrightarrow{h}[y]
 ```
-
 ```math
 \overrightarrow{F}[z] = F_{max} * u_{ABAG}(\Delta v_z) * \overrightarrow{h}[z]
 ```
@@ -176,6 +175,7 @@ Some comments about this graph here...
 Some comments about this other graph...**DO NOT USE A KALMAN FILTER FOR VELOCITY ESTIMATION**
 
 ## Future Implementation (TODO)
+- tune the controller
 - orientation control with another ABAG
 - orientation of the entire robot arm to avoid singularities and position better to sense forces
 
