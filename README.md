@@ -21,7 +21,11 @@ The followoing is a description of what has been implemented thus far.
 This figure is a layout of the **currently implemented** activity architecture in the iiwase project. The headers of the objects provide the activity name, as well as the thread time for the activity. The rows below the header provide important variables which are present in each activity. The arrows indicate a "modifies" relation, where the value of a variable in one activity is copied to the destination variable in a different activity. Provided below is a high level description of the activities used, and their respective responsibilities. 
 
 ## perception
-TODO...
+
+- inform when the whiteboard has been detected
+- return detected whiteboard vertices 
+- return dirty areas vertices
+
 
 ## iiwa_activity
 - real time communication with the KUKA FRI and Sunrise workbench.
@@ -43,7 +47,71 @@ TODO...
 - Implements a thresholded adaptive controller (ABAG) to ensure that force applied at end effector is always "human safe" and only applies force in the necessary direction for the task. 
 
 # Perception
-TODO
+
+With perception, we want to detect the whiteboard and the dirty areas on the whiteboard.
+
+To do so, we use a usb webcam that we put on a fixed location, looking from the top. 
+
+Different methods were considered when developping our perception solution. At the end, we decided to go for a region growing algorithm with several post processing steps. A general overview of the process is depicted at the figure below. We make the assumptions that whiteboard, compared to the other objects in the image, is the *biggest*, relatively *uniformly* colored rectangle. 
+
+<img src="docs/figs/perception_architecture.svg">
+
+Let's go over each of these block:
+
+**PREPROCESS**
+
+In this step, we convert the image in the hsv space. Moreover, we initialize several seeds for the GROW REGION step. We use 3 seeds, distributed accros the middle line of the image.
+
+**GROW REGION**
+
+In this step, starting from a seed, we incrimentally grow a region. The principle is as follow, in pseudo-code:
+
+```python
+
+initial_point = seed
+for each point:
+  [left,right,up,down] = find_neighbours(point)
+  for i in [left,right,up,down]:
+    check_if_not_visited()
+    if difference_in_hue(i,point) < tolerance:
+      add_to_region(i)
+
+
+```
+
+After this step. we obtain a region where white pixels correspond to the whiteboard, as represented in the figure above.
+
+**EXTERNAL CONTOURS**
+
+After obtaining the region, we want to detect the location of the whiteboard. For this, we follow the following steps:
+
+- find contours of the detected region
+- find the contour with the largest area
+- approximate this with a polygone 
+
+**CHECK**
+
+After, we do several check to see if the found polygone is coherent with the shape we are looking for. 
+
+- We verify if the aspect ratio of the polygone correspond to the desired shape
+- We verify if the angles are close to 90 degrees
+
+**SELECT**
+
+The previous steps were performed for several seeds. In this step, we select the seed that has the smallest epsilon (smaller epsilon correspond to region more similar to the polygon we want to use to approximate the region) and is coherent with our area threshold.
+
+**INTERNAL CONTOURS**
+
+Finally, we find the internal contours of the detected region
+
+
+
+## Demo
+
+<img src=docs/figs/wb_detection.gif>
+
+
+
 
 # Control 
 
