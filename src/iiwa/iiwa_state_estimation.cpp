@@ -332,18 +332,17 @@ void iiwa_state_estimation_running_compute(activity_t *activity){
 	// std::cout<< "Velocity in arm_base frame: " << continuous_state->local_cart_vel.GetTwist() <<std::endl;
 
 	//Determines whether the arm is moving or not
-	// bool one_joint_moving; //at least one is moving
-	// one_joint_moving= false;
-	// for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
-	// 	if(fabs(continuous_state->jnt_vel_avg[i]) > 0.1){
-	// 		one_joint_moving = true;
-	// 	}
-	// }
-	// discrete_state->arm_moving = one_joint_moving;
-	// if(discrete_state->arm_moving){
-	// 	printf("Robot is moving \n");
-	// }
-	discrete_state->arm_moving = !discrete_state->arm_moving; //just for testing
+	bool one_joint_moving; //at least one is moving
+	one_joint_moving= false;
+	for (unsigned int i=0;i<LBRState::NUMBER_OF_JOINTS;i++){
+		if(fabs(continuous_state->jnt_vel_avg[i]) > 0.1){
+			one_joint_moving = true;
+		}
+	}
+	discrete_state->arm_moving = one_joint_moving;
+	if(discrete_state->arm_moving){
+		printf("Robot is moving \n");
+	}
 	
 	// Logging
     params->logger->info("cart_x,{}", continuous_state->local_cart_pos.p[0]);

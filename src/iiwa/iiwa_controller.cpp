@@ -184,7 +184,7 @@ void iiwa_controller_capability_configuration_configure(activity_t *activity){
         // parameters from paper
 		// TODO we should set alpha to remove the moving avg filter here eventually
 		// TODO we should do all filtering in the estimation
-		params->abag_params.alpha = 0.75;
+		params->abag_params.alpha = 0.2;
 		params->abag_params.bias_thresh = 0.75;
 		params->abag_params.delta_bias = 0.001;
 		params->abag_params.gain_thresh = 0.5;
