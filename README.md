@@ -274,7 +274,7 @@ The other solution we propose to smooth the joint velocity estimation is to use 
 $$\dot{q}_{avg}[k] = (1-\alpha) \dot{q}_{avg}[k-1] + \alpha \dot{q}_{meas}[k]$$
 
 where $\alpha = \dfrac{h}{h+\tau_f}$ with $h$ being the cycle time and $\tau_f$, the time constant of the filter. 
-The next figures show the averaged joint velocities when using a high ($\tau_f = 2h$), middle ($\tau_f = 5h$) and low ($\tau_f = 10h$) cut-off frequency in the filter.
+The next figures show the averaged joint velocities when using a high $(\tau_f = 2h)$, middle $(\tau_f = 5h)$ and low $(\tau_f = 10h)$ cut-off frequency in the filter.
 
 <img src="docs/figs/velocity_averaging/jnt_vel_lp_high.svg">
 
