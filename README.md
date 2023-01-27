@@ -270,7 +270,9 @@ In comparison, the next figure shows the same signals when the ek_bar is compute
 <img src="docs/figs/velocity_averaging/control_moving_avg.png">
 
 The other solution we propose to smooth the joint velocity estimation is to use a first order low pass filter. The average velocity is computed as: 
+
 $$\dot{q}_{avg}[k] = (1-\alpha) \dot{q}_{avg}[k-1] + \alpha \dot{q}_{meas}[k]$$
+
 where $\alpha = \dfrac{h}{h+\tau_f}$ with $h$ being the cycle time and $\tau_f$, the time constant of the filter. 
 The next figures show the averaged joint velocities when using a high ($\tau_f = 2h$), middle ($\tau_f = 5h$) and low ($\tau_f = 10h$) cut-off frequency in the filter.
 
@@ -281,8 +283,11 @@ The next figures show the averaged joint velocities when using a high ($\tau_f =
 <img src="docs/figs/velocity_averaging/jnt_vel_lp_low.svg">
 
 The corresponding control signals are:
+
 <img src="docs/figs/velocity_averaging/control_lp_high.png">
+
 <img src="docs/figs/velocity_averaging/control_lp_mid.png">
+
 <img src="docs/figs/velocity_averaging/control_lp_low.png">
 
 The control command was the least noisy with the low pass filter with the lower cut-off frquency (neglect the oscillations around 14:15:30, the robot had a problem).
